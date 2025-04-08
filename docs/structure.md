@@ -1,0 +1,50 @@
+プロジェクト構造
+概要
+Meet Caption Assistant は、最新の React/TypeScript のベスト プラクティスに従って構造化されており、懸念事項を分離する論理ディレクトリに整理されています。拡張機能は Chrome 拡張機能の開発に WXT を使用し、ブラウザー拡張機能を構築するための合理的なアプローチを提供します。
+ディレクトリ構造
+著作権 meet-caption-assistant/
+├── docs/ # Documentation
+├── src/ # Source code
+│ ├── assets/ # Static assets
+│ ├── components/ # React components
+│ ├── hooks/ # Custom React hooks
+│ ├── types/ # TypeScript type definitions
+│ ├── utils/ # Utility functions
+│ ├── background.ts # Extension background script
+│ ├── content.tsx # Content script for Google Meet page
+│ └── popup.tsx # Extension popup UI
+├── .env.example # Example environment variables
+├── package.json # Project dependencies and scripts
+├── tsconfig.json # TypeScript configuration
+├── wxt.config.ts # WXT configuration
+└── README.md # Project overview
+ディレクトリの詳細
+/docs
+プロジェクトの詳細なドキュメントが含まれています。プロジェクトの概要、構造、タスクに関するファイルが含まれています。このディレクトリは、新しい開発者がプロ ​​ ジェクトをすばやく理解するために不可欠であり、すべてのプロジェクト関連ドキュメントの中心的な場所として機能します。
+/src
+すべてのアプリケーション コードを含むメイン ソース コード ディレクトリ。開発の大部分はここで行われ、サブディレクトリに整理されたすべての TypeScript/React コードが格納されます。
+/src/assets
+拡張機能で使用される画像、アイコン、その他のメディアなどの静的ファイルが含まれます。これらのアセットには、拡張機能アイコン、ロゴのバリエーション、および UI に必要なその他の静的リソースが含まれます。
+/src/components
+拡張機能の UI を構成する React コンポーネント。各コンポーネントは特定の UI 要素または機能に重点を置いており、適切なコンポーネント構成と再利用性を備えた React のベスト プラクティスに従います。
+/src/hooks
+再利用可能なステートフル ロジックをカプセル化するカスタム React フック。これらのフックは、キャプションのスクレイピング、状態管理、およびコンポーネント コードを乱雑にする可能性のあるその他の動作などの複雑なロジックを抽象化します。
+/src/types
+プロジェクト全体で使用される TypeScript 型定義。集中化された型定義により、コードベース全体の一貫性が確保され、オートコンプリートと型チェックが改善されて開発者のエクスペリエンスが向上します。
+/src/utils
+プロジェクト全体で使用されるユーティリティ関数とヘルパー メソッド。これらは、データ変換、文字列操作、DOM 相互作用、その他の一般的な操作などのタスクを処理する純粋な関数です。
+/src/background.ts
+永続的に実行される Chrome 拡張機能のバックグラウンド スクリプト。拡張機能のライフサイクル イベントを処理し、ブラウザー セッション間で持続する状態を管理し、コンテンツ スクリプトとポップアップを調整します。
+/src/content.tsx
+Google Meet ページのコンテキストで実行されるコンテンツ スクリプト。UI 要素の挿入、DOM の変更の監視、キャプションのスクレイピング、Google Meet アプリケーションとのインターフェイスを担当します。
+/src/popup.tsx
+拡張機能アイコンをクリックすると表示される拡張機能ポップアップの UI。Google Meet インターフェースの外部でユーザー設定、コントロール、拡張機能へのアクセスを提供します。
+キーファイル
+wxt.config.ts
+Chrome 拡張機能を構築する WXT ツールの構成。エントリ ポイント、権限、コンテンツ スクリプト、その他の拡張機能固有の設定を定義します。
+tsconfig.json
+TypeScript コードのチェックおよびコンパイル方法を定義する TypeScript コンパイラ構成。プロジェクト全体で型の安全性を確保し、よりクリーンなインポートのためにパス エイリアスを設定します。
+.env.example
+.env 開発に必要な環境変数のテンプレート。開発者は、特定の構成値とともにこのファイルをローカル ファイルにコピーします。
+package.json
+プロジェクトの依存関係、開発スクリプト、メタデータを定義します。拡張機能の開発、ビルド、テスト用のすべての NPM スクリプトが含まれています。
