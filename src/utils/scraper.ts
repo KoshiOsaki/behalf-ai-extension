@@ -25,7 +25,6 @@ export interface CaptionExportData {
 export const findCaptionContainer = (): HTMLElement | null => {
   // 複数の可能性のあるセレクタを試す
   const selectors = [
-    "div.YTBDae-Bz112c-8LtmJb", // 以前のセレクタ
     '[aria-label="字幕"]', // ユーザー提供のセレクタ
     ".nMcdL.bj4p3b", // 字幕テキスト要素の親
     ".VfPpkd-gIZYRc", // 別の可能性のあるセレクタ
@@ -35,13 +34,12 @@ export const findCaptionContainer = (): HTMLElement | null => {
     const element = document.querySelector(selector) as HTMLElement;
     if (element) {
       console.log(
-        `Meet Caption Assistant: 字幕コンテナが見つかりました (${selector})`
+        "Meet Caption Assistant: 字幕コンテナが見つかりました",
+        element
       );
       return element;
     }
   }
-
-  console.log("Meet Caption Assistant: 字幕コンテナが見つかりませんでした");
   return null;
 };
 
@@ -50,12 +48,9 @@ export const findCaptionContainer = (): HTMLElement | null => {
  * @param callback 字幕コンテナが見つかったときに実行するコールバック関数
  */
 export const observePageForCaptionContainer = (callback: () => void): void => {
-  console.log("Meet Caption Assistant: 字幕コンテナを監視します");
-
   // 既に字幕コンテナが存在するか確認
   const existingContainer = findCaptionContainer();
   if (existingContainer) {
-    console.log("Meet Caption Assistant: 字幕コンテナが既に存在します");
     callback();
     return;
   }
@@ -64,7 +59,6 @@ export const observePageForCaptionContainer = (callback: () => void): void => {
   const observer = new MutationObserver((mutations) => {
     const captionContainer = findCaptionContainer();
     if (captionContainer) {
-      console.log("Meet Caption Assistant: 字幕コンテナが見つかりました");
       observer.disconnect();
       callback();
     }
@@ -79,9 +73,6 @@ export const observePageForCaptionContainer = (callback: () => void): void => {
   // 一定時間後にタイムアウト
   setTimeout(() => {
     if (!findCaptionContainer()) {
-      console.log(
-        "Meet Caption Assistant: 字幕コンテナが見つかりませんでした（タイムアウト）"
-      );
       observer.disconnect();
     }
   }, 30000); // 30秒後にタイムアウト

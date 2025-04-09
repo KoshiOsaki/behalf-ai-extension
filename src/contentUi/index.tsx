@@ -3,6 +3,11 @@ import { createRoot } from "react-dom/client";
 import SideDrawer from "../components/SideDrawer";
 import CaptionsList from "../components/CaptionsList";
 import { CaptionData } from "../types";
+import {
+  findCaptionContainer,
+  observeCaptionChanges,
+  observePageForCaptionContainer,
+} from "../utils/scraper";
 
 /**
  * Meet Caption Assistantのサイドドロワー UI
@@ -13,35 +18,28 @@ const CaptionAssistantUI: React.FC = () => {
   const [highlightedCaptionId, setHighlightedCaptionId] = useState<
     number | undefined
   >(undefined);
-  // captionをバックグラウンドから取得
-  const fetchCaptions = () => {
-    chrome.runtime.sendMessage({ type: "GET_CAPTIONS" }, (response) => {
-      if (response && response.captions) {
-        setCaptions(response.captions);
-      }
-    });
-  };
 
   // キャプションデータを取得する
   useEffect(() => {
-    // 初回読み込み時にキャプションを取得
-    fetchCaptions();
+    console.log(
+      "Reactコンポーネントがマウントされました。字幕監視を開始します。"
+    );
 
-    // メッセージリスナーを設定して、キャプションの更新を監視
-    const messageListener = (message: any) => {
-      if (message.type === "CAPTIONS_UPDATED" && message.data) {
-        setCaptions(message.data);
-      }
+    // 字幕を処理するコールバック関数
+    const handleCaptions = (newCaptions: CaptionData[]) => {
+      console.log("新しい字幕を検出:", newCaptions);
+      setCaptions((prevCaptions) => [...prevCaptions, ...newCaptions]);
     };
 
-    chrome.runtime.onMessage.addListener(messageListener);
+    // 字幕コンテナを監視
+    observePageForCaptionContainer(() => {
+      console.log("字幕コンテナが見つかりました。監視を開始します。");
+      const observer = observeCaptionChanges(handleCaptions);
+    });
 
-    // 定期的にキャプションを更新（バックアップとして）
-    const intervalId = setInterval(fetchCaptions, 5000);
-
+    // クリーンアップ関数
     return () => {
-      chrome.runtime.onMessage.removeListener(messageListener);
-      clearInterval(intervalId);
+      // 必要に応じてクリーンアップ処理を追加
     };
   }, []);
 
