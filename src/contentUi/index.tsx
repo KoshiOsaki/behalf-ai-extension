@@ -13,17 +13,17 @@ const CaptionAssistantUI: React.FC = () => {
   const [highlightedCaptionId, setHighlightedCaptionId] = useState<
     number | undefined
   >(undefined);
+  // captionをバックグラウンドから取得
+  const fetchCaptions = () => {
+    chrome.runtime.sendMessage({ type: "GET_CAPTIONS" }, (response) => {
+      if (response && response.captions) {
+        setCaptions(response.captions);
+      }
+    });
+  };
 
   // キャプションデータを取得する
   useEffect(() => {
-    const fetchCaptions = () => {
-      chrome.runtime.sendMessage({ type: "GET_CAPTIONS" }, (response) => {
-        if (response && response.captions) {
-          setCaptions(response.captions);
-        }
-      });
-    };
-
     // 初回読み込み時にキャプションを取得
     fetchCaptions();
 
