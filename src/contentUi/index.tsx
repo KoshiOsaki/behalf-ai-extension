@@ -5,9 +5,11 @@ import CaptionsList from "../components/CaptionsList";
 import { CaptionData } from "../types";
 import {
   findCaptionContainer,
+  getMeetingTitle,
   observeCaptionChanges,
   observePageForCaptionContainer,
 } from "../utils/scraper";
+import { CaptionEnableReminderBanner } from "../components/CaptionEnableReminderBanner";
 
 /**
  * Meet Caption Assistantのサイドドロワー UI
@@ -18,6 +20,11 @@ const CaptionAssistantUI: React.FC = () => {
   const [highlightedCaptionId, setHighlightedCaptionId] = useState<
     number | undefined
   >(undefined);
+
+  const isCaptionsEnabled = captions.length > 0;
+  const isMeetingStarted = getMeetingTitle() !== null; //TODO:
+  console.log("captions", captions);
+  console.log("getMeetingTitle", getMeetingTitle());
 
   // キャプションデータを取得する
   useEffect(() => {
@@ -32,11 +39,11 @@ const CaptionAssistantUI: React.FC = () => {
     };
 
     // 字幕コンテナを監視
+    // TODO: オブサーブの仕組み
     observePageForCaptionContainer(() => {
       console.log("字幕コンテナが見つかりました。監視を開始します。");
       const observer = observeCaptionChanges(handleCaptions);
     });
-
     // クリーンアップ関数
     return () => {
       // 必要に応じてクリーンアップ処理を追加
@@ -45,6 +52,11 @@ const CaptionAssistantUI: React.FC = () => {
 
   return (
     <>
+      {/* 字幕有効化リマインダー */}
+      {isMeetingStarted && !isCaptionsEnabled && (
+        <CaptionEnableReminderBanner onClose={() => setIsOpen(false)} />
+      )}
+
       {/* トグルボタン */}
       <div className="fixed top-20 right-4 z-50">
         <button
@@ -84,10 +96,21 @@ const CaptionAssistantUI: React.FC = () => {
 
       {/* サイドドロワー */}
       <SideDrawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
-        <CaptionsList
-          captions={captions}
-          highlightedCaptionId={highlightedCaptionId}
-        />
+        {captions.length > 0 ? (
+          <CaptionsList
+            captions={captions}
+            highlightedCaptionId={highlightedCaptionId}
+          />
+        ) : (
+          <div className="p-4 text-center text-gray-500">
+            <p>字幕がまだありません。</p>
+            {!isCaptionsEnabled && (
+              <p className="mt-2 text-sm">
+                キーボードの「c」キーを押して字幕を有効にしてください。
+              </p>
+            )}
+          </div>
+        )}
       </SideDrawer>
     </>
   );
@@ -95,12 +118,7 @@ const CaptionAssistantUI: React.FC = () => {
 
 // UIをDOMに挿入する関数
 export const injectUI = () => {
-  console.log("inject!!!!!!!!");
   // すでに挿入されている場合は何もしない
-  if (document.getElementById("meet-caption-assistant-root")) {
-    console.log("Meet Caption Assistant: UIはすでに挿入されています");
-    return;
-  }
 
   // スタイルシートを挿入
   const style = document.createElement("style");
@@ -122,7 +140,6 @@ export const injectUI = () => {
     // React 18の新しいAPIを使用してレンダリング
     const root = createRoot(rootElement);
     root.render(<CaptionAssistantUI />);
-    console.log("Meet Caption Assistant: UIを挿入しました");
   } catch (error) {
     console.error(
       "Meet Caption Assistant: UIの挿入中にエラーが発生しました",
