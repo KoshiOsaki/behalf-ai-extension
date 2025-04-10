@@ -38,15 +38,15 @@ const CaptionAssistantUI: React.FC = () => {
       setCaptions((prevCaptions) => {
         // 新しい字幕を処理する
         const updatedCaptions = [...prevCaptions];
-        
+
         newCaptions.forEach((newCaption) => {
           // 同じタイムスタンプと話者を持つ字幕を検索
           const existingIndex = updatedCaptions.findIndex(
-            (caption) => 
-              caption.timestamp === newCaption.timestamp && 
+            (caption) =>
+              caption.timestamp === newCaption.timestamp &&
               caption.speaker === newCaption.speaker
           );
-          
+
           if (existingIndex !== -1) {
             // 既存の字幕が見つかった場合は更新
             updatedCaptions[existingIndex] = newCaption;
@@ -55,7 +55,7 @@ const CaptionAssistantUI: React.FC = () => {
             updatedCaptions.push(newCaption);
           }
         });
-        
+
         return updatedCaptions;
       });
     };
@@ -112,7 +112,11 @@ const CaptionAssistantUI: React.FC = () => {
       </div>
 
       {/* サイドドロワー */}
-      <SideDrawer isOpen={isOpen} onClose={() => setIsOpen(false)}>
+      <SideDrawer
+        captions={captions}
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+      >
         {captions.length > 0 ? (
           <CaptionsList
             captions={captions}

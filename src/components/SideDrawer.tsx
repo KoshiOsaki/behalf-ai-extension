@@ -1,11 +1,20 @@
 import React, { useEffect, useRef } from "react";
-import { SideDrawerProps } from "../types";
+import { CaptionData } from "../types";
+import { exportCaptionsToMarkdown } from "../utils/caption";
+
+type Props = {
+  captions: CaptionData[];
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+};
 
 /**
  * 折りたたみ可能なサイドドロワーコンポーネント
  * Google Meetのページに表示される字幕履歴を表示するためのドロワー
  */
-const SideDrawer: React.FC<SideDrawerProps> = ({
+const SideDrawer: React.FC<Props> = ({
+  captions,
   isOpen,
   onClose,
   children,
@@ -153,8 +162,7 @@ const SideDrawer: React.FC<SideDrawerProps> = ({
                 cursor: "pointer",
               }}
               onClick={() => {
-                // エクスポート機能をトリガー
-                chrome.runtime.sendMessage({ type: "EXPORT_CAPTIONS" });
+                exportCaptionsToMarkdown(captions);
               }}
             >
               エクスポート

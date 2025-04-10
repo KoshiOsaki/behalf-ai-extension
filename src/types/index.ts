@@ -8,15 +8,6 @@ export interface CaptionData {
 }
 
 /**
- * サイドドロワーのプロパティ
- */
-export interface SideDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}
-
-/**
  * キャプションアイテムのプロパティ
  */
 export interface CaptionItemProps {

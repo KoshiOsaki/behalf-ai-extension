@@ -134,3 +134,69 @@ export const exportCaptionsToJson = (captions: CaptionData[]): void => {
     );
   }
 };
+
+// 字幕をマークダウンファイルとしてエクスポートする
+export const exportCaptionsToMarkdown = (captions: CaptionData[]): void => {
+  try {
+    if (captions.length === 0) {
+      console.warn("Meet Caption Assistant: エクスポートする字幕がありません");
+      return;
+    }
+
+    const meetingTitle = getMeetingTitle() || "会議";
+    const today = getCurrentDate();
+    const fileName = `${meetingTitle}_${today}.md`;
+
+    // 時間ごとにグループ化する（10分間隔）
+    const timeGroups: { [key: string]: CaptionExportData[] } = {};
+    
+    captions.forEach((caption) => {
+      const date = new Date(caption.timestamp);
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = Math.floor(date.getMinutes() / 10) * 10;
+      const minutesStr = minutes.toString().padStart(2, '0');
+      const timeKey = `${hours}:${minutesStr}`;
+      
+      if (!timeGroups[timeKey]) {
+        timeGroups[timeKey] = [];
+      }
+      
+      timeGroups[timeKey].push({
+        speaker: caption.speaker,
+        content: caption.text,
+        timestamp: date.toISOString()
+      });
+    });
+
+    // マークダウンテキストを生成
+    let markdownContent = `# ${meetingTitle} - ${today}\n\n`;
+    
+    Object.keys(timeGroups).sort().forEach(timeKey => {
+      markdownContent += `\n## ${timeKey}\n \n`;
+      
+      timeGroups[timeKey].forEach(item => {
+        markdownContent += `${item.speaker}: ${item.content}\n`;
+      });
+      
+      markdownContent += '\n \n';
+    });
+
+    // ファイルとしてダウンロード
+    const blob = new Blob([markdownContent], {
+      type: "text/markdown;charset=utf-8"
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    link.click();
+
+    console.log(
+      `Meet Caption Assistant: 字幕を ${fileName} としてエクスポートしました`
+    );
+  } catch (error) {
+    console.error(
+      "Meet Caption Assistant: 字幕のエクスポート中にエラーが発生しました",
+      error
+    );
+  }
+};
