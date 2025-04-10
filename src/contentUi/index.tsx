@@ -3,13 +3,12 @@ import { createRoot } from "react-dom/client";
 import SideDrawer from "../components/SideDrawer";
 import CaptionsList from "../components/CaptionsList";
 import { CaptionData } from "../types";
+import { CaptionEnableReminderBanner } from "../components/CaptionEnableReminderBanner";
 import {
-  findCaptionContainer,
-  getMeetingTitle,
   observeCaptionChanges,
   observePageForCaptionContainer,
-} from "../utils/scraper";
-import { CaptionEnableReminderBanner } from "../components/CaptionEnableReminderBanner";
+} from "../utils/caption";
+import { getMeetingTitle, isCheckCaptionActive } from "../utils/scraper";
 
 /**
  * Meet Caption Assistantのサイドドロワー UI
@@ -21,10 +20,11 @@ const CaptionAssistantUI: React.FC = () => {
     number | undefined
   >(undefined);
 
-  const isCaptionsEnabled = captions.length > 0;
-  const isMeetingStarted = getMeetingTitle() !== null; //TODO:
+  const isCaptionsEnabled = isCheckCaptionActive();
+  // const isMeetingStarted = getMeetingTitle() !== null;
+  const isMeetingStarted = true;
   console.log("captions", captions);
-  console.log("getMeetingTitle", getMeetingTitle());
+  console.log("isMeetingStarted", isMeetingStarted);
 
   // キャプションデータを取得する
   useEffect(() => {
@@ -44,10 +44,6 @@ const CaptionAssistantUI: React.FC = () => {
       console.log("字幕コンテナが見つかりました。監視を開始します。");
       const observer = observeCaptionChanges(handleCaptions);
     });
-    // クリーンアップ関数
-    return () => {
-      // 必要に応じてクリーンアップ処理を追加
-    };
   }, []);
 
   return (
@@ -147,3 +143,20 @@ export const injectUI = () => {
     );
   }
 };
+
+// TODO: だめかも
+// const checkIsMeetingStarted = () => {
+//   // まず、URLがGoogle Meetのミーティングパターンに一致するか確認
+//   const url = window.location.href;
+//   // クエリパラメータを無視するために、?より前の部分だけを取得
+//   const baseUrl = url.split("?")[0];
+//   const meetPattern =
+//     /https:\/\/meet\.google\.com\/[a-z0-9]{3}-[a-z0-9]{4}-[a-z0-9]{3}/;
+
+//   if (!meetPattern.test(baseUrl)) {
+//     console.log("Meet Caption Assistant: ミーティングURLではありません", url);
+//     return false;
+//   }
+
+//   return true;
+// };

@@ -1,316 +1,76 @@
 // Google Meetの字幕をスクレイピングするためのユーティリティ関数
 
-/**
- * 字幕データの型定義
- */
-export interface CaptionData {
-  speaker: string;
-  text: string;
-  timestamp: number;
-}
+import { CaptionData } from "../types";
 
-/**
- * 字幕データをエクスポート用に整形した型定義
- */
-export interface CaptionExportData {
-  speaker: string;
-  content: string;
-  timestamp?: string;
-}
+// 字幕がオンになっているかどうかを判定する
+export const isCheckCaptionActive = (): boolean => {
+  // 字幕ボタンを検索
+  const captionButton = findCaptionButton();
 
-/**
- * 字幕コンテナを見つける関数
- * @returns 字幕コンテナの要素、または見つからない場合はnull
- */
-export const findCaptionContainer = (): HTMLElement | null => {
-  // 複数の可能性のあるセレクタを試す
-  const selectors = [
-    '[aria-label="字幕"]', // ユーザー提供のセレクタ
-    ".nMcdL.bj4p3b", // 字幕テキスト要素の親
-    ".VfPpkd-gIZYRc", // 別の可能性のあるセレクタ
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector) as HTMLElement;
-    if (element) {
-      console.log(
-        "Meet Caption Assistant: 字幕コンテナが見つかりました",
-        element
-      );
-      return element;
-    }
+  // ボタンが見つからない場合はfalseを返す
+  if (!captionButton) {
+    console.log("Meet Caption Assistant: 字幕ボタンが見つかりません");
+    return false;
   }
-  return null;
+
+  // aria-pressed属性が"true"の場合は字幕がオン
+  // aria-label属性が"字幕をオフにする"の場合も字幕がオン
+  const isActive =
+    captionButton.getAttribute("aria-pressed") === "true" ||
+    captionButton.getAttribute("aria-label") === "字幕をオフにする";
+
+  return isActive;
 };
 
-/**
- * 字幕コンテナが表示されるのを監視する関数
- * @param callback 字幕コンテナが見つかったときに実行するコールバック関数
- */
-export const observePageForCaptionContainer = (callback: () => void): void => {
-  // 既に字幕コンテナが存在するか確認
-  const existingContainer = findCaptionContainer();
-  if (existingContainer) {
-    callback();
-    return;
-  }
+export const findCaptionButton = () => {
+  // data-tooltip-id が ucc-8 のボタンを取得する
+  return document.querySelector('button[data-tooltip-id="ucc-8"]');
+};
 
-  // 字幕コンテナが表示されるのを監視
-  const observer = new MutationObserver((mutations) => {
-    const captionContainer = findCaptionContainer();
-    if (captionContainer) {
-      observer.disconnect();
-      callback();
+export const getMeetingTitle = () => {
+  const titleElem = document.querySelector("[data-meeting-title]");
+  return titleElem ? titleElem.getAttribute("data-meeting-title") : null;
+};
+
+export const findCaptionContainer = () => {
+  return document.querySelector('div[role="region"][aria-label="字幕"]');
+};
+
+// 字幕データの中身を取得する
+export const getCaptionDataList = (): CaptionData[] => {
+  // 「字幕」とラベル付けされた領域を取得
+  const captionRegion = findCaptionContainer();
+  if (!captionRegion) return [];
+
+  // ここでは、直下の子要素で、内部に img[data-iml] を含むものを字幕のエントリーとみなす
+  const entries = Array.from(
+    captionRegion.querySelectorAll(":scope > div")
+  ).filter((entry) => entry.querySelector("img[data-iml]"));
+
+  // 各エントリーから CaptionData を抽出
+  const captionDataArray = entries.map((entry) => {
+    // 画像要素の data-iml 属性から timestamp を取得
+    const img = entry.querySelector("img[data-iml]");
+    const timestampStr = img ? img.getAttribute("data-iml") : "";
+    const timestamp = timestampStr ? parseFloat(timestampStr) : 0;
+
+    // 発言者は、画像要素の親要素内にある最初の span 要素とする
+    const speakerElem =
+      img && img.parentElement ? img.parentElement.querySelector("span") : null;
+    const speaker = speakerElem ? speakerElem.textContent?.trim() : "";
+
+    // 字幕の文章は、ここではエントリー内の直下の子要素の２番目（発言者部以外の部分）を利用
+    let text = "";
+    const children = Array.from(entry.children);
+    if (children.length >= 2) {
+      text = children[1].textContent?.trim() || "";
+    } else {
+      // 万が一直下の子要素が1つの場合は、全体のテキストから発言者部分を除去するなどの処理を追加するなどの工夫が必要
+      text = entry.textContent?.trim() || "";
     }
+
+    return { speaker: speaker || "", text, timestamp };
   });
 
-  // ドキュメント全体の変更を監視
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  // 一定時間後にタイムアウト
-  setTimeout(() => {
-    if (!findCaptionContainer()) {
-      observer.disconnect();
-    }
-  }, 30000); // 30秒後にタイムアウト
-};
-
-/**
- * 要素からテキストを抽出する関数
- * @param element テキストを抽出する要素
- * @returns 抽出されたテキスト
- */
-export const extractText = (element: Element | null): string => {
-  if (!element) return "";
-  const text = element.textContent?.trim() || "";
-  return text;
-};
-
-/**
- * 会議のタイトルを取得する関数
- * @returns 会議のタイトル、または取得できない場合はデフォルト値
- */
-export const getMeetingTitle = (): string => {
-  const selectors = [
-    ".gSlHI .u6vdEc", // ユーザー提供のセレクタ
-    "[data-meeting-title]",
-    ".eFmLfc", // 別の可能性のあるセレクタ
-  ];
-
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    if (element) {
-      const title = extractText(element).replace(/\s+/g, "");
-      if (title) return title;
-    }
-  }
-
-  return "Meeting";
-};
-
-/**
- * 現在の日付を YYYYMMDD 形式で取得する関数
- * @returns YYYYMMDD 形式の日付文字列
- */
-export const getCurrentDate = (): string => {
-  return new Date().toISOString().split("T")[0].replace(/-/g, "");
-};
-
-/**
- * 字幕の変更を監視する関数
- * @param callback 新しい字幕データが検出されたときに実行するコールバック関数
- * @returns MutationObserverインスタンス
- */
-export const observeCaptionChanges = (
-  callback: (captions: CaptionData[]) => void
-): MutationObserver => {
-  const captionContainer = findCaptionContainer();
-  if (!captionContainer) {
-    console.error("Meet Caption Assistant: 字幕コンテナが見つかりません");
-    return new MutationObserver(() => {});
-  }
-
-  console.log(
-    "Meet Caption Assistant: 字幕の変更を監視します",
-    captionContainer
-  );
-
-  // 前回の字幕データを保存する変数
-  let previousCaptions: CaptionData[] = [];
-
-  // 字幕の変更を監視するオブザーバー
-  const observer = new MutationObserver((mutations) => {
-    try {
-      // 現在の字幕データを取得
-      const currentCaptions = extractCaptionData(captionContainer);
-
-      // 前回と異なる場合のみコールバックを実行
-      if (
-        JSON.stringify(currentCaptions) !== JSON.stringify(previousCaptions) &&
-        currentCaptions.length > 0
-      ) {
-        previousCaptions = currentCaptions;
-        callback(currentCaptions);
-      }
-    } catch (error) {
-      console.error(
-        "Meet Caption Assistant: 字幕データの抽出中にエラーが発生しました",
-        error
-      );
-    }
-  });
-
-  // 字幕コンテナの変更を監視
-  observer.observe(captionContainer, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
-
-  return observer;
-};
-
-/**
- * 字幕コンテナから字幕データを抽出する関数
- * @param container 字幕コンテナ
- * @returns 抽出された字幕データの配列
- */
-const extractCaptionData = (container: HTMLElement): CaptionData[] => {
-  try {
-    // 複数の可能性のあるセレクタを試す
-    const selectors = [
-      ".VfPpkd-gIZYRc", // 以前のセレクタ
-      ".nMcdL.bj4p3b", // ユーザー提供のセレクタ
-    ];
-
-    let captionElements: NodeListOf<Element> | null = null;
-
-    // 有効なセレクタを見つける
-    for (const selector of selectors) {
-      const elements = container.querySelectorAll(selector);
-      if (elements && elements.length > 0) {
-        captionElements = elements;
-        break;
-      }
-    }
-
-    if (!captionElements || captionElements.length === 0) {
-      return [];
-    }
-
-    const captions: CaptionData[] = [];
-
-    captionElements.forEach((element) => {
-      try {
-        // 話者名と字幕テキストを取得するための複数のセレクタを試す
-        const speakerSelectors = [
-          ".zs7s8d", // 以前のセレクタ
-          ".NWpY1d", // ユーザー提供のセレクタ
-        ];
-
-        const textSelectors = [
-          ".iTTPOb", // 以前のセレクタ
-          ".VbkSUe", // ユーザー提供のセレクタ
-        ];
-
-        // 話者名を取得
-        let speakerElement = null;
-        for (const selector of speakerSelectors) {
-          speakerElement = element.querySelector(selector);
-          if (speakerElement) break;
-        }
-
-        // 字幕テキストを取得
-        let textElement = null;
-        for (const selector of textSelectors) {
-          textElement = element.querySelector(selector);
-          if (textElement) break;
-        }
-
-        const speaker = speakerElement
-          ? extractText(speakerElement)
-          : "不明な話者";
-        const text = textElement ? extractText(textElement) : "";
-
-        if (text) {
-          captions.push({
-            speaker,
-            text,
-            timestamp: Date.now(),
-          });
-        }
-      } catch (error) {
-        console.error(
-          "Meet Caption Assistant: 字幕要素の処理中にエラーが発生しました",
-          error
-        );
-      }
-    });
-
-    return captions;
-  } catch (error) {
-    console.error(
-      "Meet Caption Assistant: 字幕データの抽出中にエラーが発生しました",
-      error
-    );
-    return [];
-  }
-};
-
-/**
- * キャプションデータをエクスポート用の形式に変換する関数
- * @param captions 内部形式のキャプションデータ
- * @returns エクスポート用に整形されたキャプションデータ
- */
-export const formatCaptionsForExport = (
-  captions: CaptionData[]
-): CaptionExportData[] => {
-  return captions.map((caption) => {
-    const timestamp = new Date(caption.timestamp).toISOString();
-    return {
-      speaker: caption.speaker,
-      content: caption.text,
-      timestamp,
-    };
-  });
-};
-
-/**
- * キャプションデータをJSONファイルとしてエクスポートする関数
- * @param captions エクスポートするキャプションデータ
- * @param meetingTitle 会議のタイトル（ファイル名に使用）
- * @param date 日付（ファイル名に使用）
- */
-export const exportCaptionsToJson = (captions: CaptionData[]): void => {
-  try {
-    if (captions.length === 0) {
-      console.warn("Meet Caption Assistant: エクスポートする字幕がありません");
-      return;
-    }
-
-    const meetingTitle = getMeetingTitle();
-    const today = getCurrentDate();
-    const fileName = `${meetingTitle}_${today}.json`;
-
-    const exportData = formatCaptionsForExport(captions);
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
-
-    console.log(
-      `Meet Caption Assistant: 字幕を ${fileName} としてエクスポートしました`
-    );
-  } catch (error) {
-    console.error(
-      "Meet Caption Assistant: 字幕のエクスポート中にエラーが発生しました",
-      error
-    );
-  }
+  return captionDataArray;
 };

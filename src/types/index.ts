@@ -33,3 +33,21 @@ export interface CaptionsListProps {
   captions: CaptionData[];
   highlightedCaptionId?: number;
 }
+
+/**
+ * 字幕データの型定義
+ */
+export interface CaptionData {
+  speaker: string;
+  text: string;
+  timestamp: number;
+}
+
+/**
+ * 字幕データをエクスポート用に整形した型定義
+ */
+export interface CaptionExportData {
+  speaker: string;
+  content: string;
+  timestamp?: string;
+}
