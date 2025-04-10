@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 interface CaptionEnableReminderBannerProps {
   onClose?: () => void;
@@ -20,32 +20,99 @@ export const CaptionEnableReminderBanner: React.FC<
     }
   };
 
+  // コンポーネントがマウントされたときにbodyにスタイルを追加
+  useEffect(() => {
+    // バナーが表示されている間はbodyのmargin-topを追加
+    const originalMarginTop = document.body.style.marginTop;
+    document.body.style.marginTop = "60px";
+
+    return () => {
+      // クリーンアップ時に元に戻す
+      document.body.style.marginTop = originalMarginTop;
+    };
+  }, []);
+
+  // バナーのスタイル
+  const bannerStyle: React.CSSProperties = {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    right: "0",
+    zIndex: 2147483647, // 最大のz-index値
+    backgroundColor: "#fef9c3",
+    borderBottom: "4px solid #f59e0b",
+    color: "#b45309",
+    padding: "12px 16px",
+    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+    fontFamily: "Roboto, Arial, sans-serif",
+    fontSize: "14px",
+    lineHeight: "1.5",
+    display: "block",
+    width: "100%",
+    textAlign: "center",
+  };
+
+  const contentStyle: React.CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    maxWidth: "800px",
+    margin: "0 auto",
+    position: "relative",
+  };
+
+  const textStyle: React.CSSProperties = {
+    margin: "0",
+    fontWeight: "bold",
+  };
+
+  const subtextStyle: React.CSSProperties = {
+    margin: "0 0 0 8px",
+    fontWeight: "normal",
+  };
+
+  const closeButtonStyle: React.CSSProperties = {
+    position: "absolute",
+    right: "0",
+    top: "50%",
+    transform: "translateY(-50%)",
+    background: "transparent",
+    border: "none",
+    color: "#b45309",
+    cursor: "pointer",
+    padding: "8px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+  };
+
   return isVisible ? (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded shadow-md max-w-md">
-      <div className="flex items-center">
-        <div>
-          <p className="font-bold">字幕が有効になっていません</p>
-          <p className="text-sm">
+    <div style={bannerStyle} id="caption-reminder-banner">
+      <div style={contentStyle}>
+        <p style={textStyle}>
+          字幕が見つかりません。字幕がONになっているかを確認してください
+          <span style={subtextStyle}>
             キーボードの「c」キーを押して字幕を有効にしてください。
-          </p>
-        </div>
+          </span>
+        </p>
         <button
           onClick={handleClose}
-          className="ml-auto text-yellow-500 hover:text-yellow-700"
+          style={closeButtonStyle}
           aria-label="閉じる"
         >
           <svg
-            className="h-5 w-5"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
+            width="16"
+            height="16"
             viewBox="0 0 24 24"
-            stroke="currentColor"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
           >
             <path
+              d="M6 18L18 6M6 6l12 12"
+              stroke="currentColor"
+              strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              strokeWidth="2"
-              d="M6 18L18 6M6 6l12 12"
             />
           </svg>
         </button>
