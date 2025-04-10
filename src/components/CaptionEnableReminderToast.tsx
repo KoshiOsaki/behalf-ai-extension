@@ -1,16 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
 interface CaptionEnableReminderBannerProps {
   onClose?: () => void;
 }
 
 /**
- * 字幕が有効になっていない場合に表示するバナーコンポーネント
+ * 字幕が有効になっていない場合に表示するトースト風通知コンポーネント
  */
-export const CaptionEnableReminderBanner: React.FC<
+export const CaptionEnableReminderToast: React.FC<
   CaptionEnableReminderBannerProps
 > = ({ onClose }) => {
-  console.log("CaptionEnableReminderBanner");
   const [isVisible, setIsVisible] = useState(true);
 
   const handleClose = () => {
@@ -20,45 +19,31 @@ export const CaptionEnableReminderBanner: React.FC<
     }
   };
 
-  // コンポーネントがマウントされたときにbodyにスタイルを追加
-  useEffect(() => {
-    // バナーが表示されている間はbodyのmargin-topを追加
-    const originalMarginTop = document.body.style.marginTop;
-    document.body.style.marginTop = "60px";
-
-    return () => {
-      // クリーンアップ時に元に戻す
-      document.body.style.marginTop = originalMarginTop;
-    };
-  }, []);
-
-  // バナーのスタイル
-  const bannerStyle: React.CSSProperties = {
+  // トーストのスタイル
+  const toastStyle: React.CSSProperties = {
     position: "fixed",
-    top: "0",
-    left: "0",
-    right: "0",
+    bottom: "160px",
+    left: "24px",
     zIndex: 2147483647, // 最大のz-index値
     backgroundColor: "#fef9c3",
-    borderBottom: "4px solid #f59e0b",
+    border: "1px solid #f59e0b",
+    borderLeft: "4px solid #f59e0b",
     color: "#b45309",
     padding: "12px 16px",
-    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.1)",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
     fontFamily: "Roboto, Arial, sans-serif",
     fontSize: "14px",
     lineHeight: "1.5",
     display: "block",
-    width: "100%",
-    textAlign: "center",
+    maxWidth: "400px",
+    borderRadius: "6px",
   };
 
   const contentStyle: React.CSSProperties = {
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    maxWidth: "800px",
-    margin: "0 auto",
+    flexDirection: "column",
     position: "relative",
+    paddingRight: "24px", // 閉じるボタン用のスペース
   };
 
   const textStyle: React.CSSProperties = {
@@ -67,33 +52,31 @@ export const CaptionEnableReminderBanner: React.FC<
   };
 
   const subtextStyle: React.CSSProperties = {
-    margin: "0 0 0 8px",
+    margin: "4px 0 0 0",
     fontWeight: "normal",
+    fontSize: "13px",
   };
 
   const closeButtonStyle: React.CSSProperties = {
     position: "absolute",
     right: "0",
-    top: "50%",
-    transform: "translateY(-50%)",
+    top: "0",
     background: "transparent",
     border: "none",
     color: "#b45309",
     cursor: "pointer",
-    padding: "8px",
+    padding: "4px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
   };
 
   return isVisible ? (
-    <div style={bannerStyle} id="caption-reminder-banner">
+    <div style={toastStyle} id="caption-reminder-toast">
       <div style={contentStyle}>
-        <p style={textStyle}>
-          字幕が見つかりません。字幕がONになっているかを確認してください
-          <span style={subtextStyle}>
-            キーボードの「c」キーを押して字幕を有効にしてください。
-          </span>
+        <p style={textStyle}>字幕が見つかりません</p>
+        <p style={subtextStyle}>
+          キーボードの「c」キーを押して字幕を有効にしてください。
         </p>
         <button
           onClick={handleClose}

@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import SideDrawer from "../components/SideDrawer";
 import CaptionsList from "../components/CaptionsList";
 import { CaptionData } from "../types";
-import { CaptionEnableReminderBanner } from "../components/CaptionEnableReminderBanner";
+import { CaptionEnableReminderToast } from "../components/CaptionEnableReminderToast";
 import {
   observeCaptionChanges,
   observePageForCaptionContainer,
@@ -23,6 +23,7 @@ const CaptionAssistantUI: React.FC = () => {
   const isCaptionsEnabled = isCheckCaptionActive();
   // const isMeetingStarted = getMeetingTitle() !== null;
   const isMeetingStarted = true;
+
   console.log("captions", captions);
   console.log("isMeetingStarted", isMeetingStarted);
 
@@ -34,15 +35,35 @@ const CaptionAssistantUI: React.FC = () => {
 
     // 字幕を処理するコールバック関数
     const handleCaptions = (newCaptions: CaptionData[]) => {
-      console.log("新しい字幕を検出:", newCaptions);
-      setCaptions((prevCaptions) => [...prevCaptions, ...newCaptions]);
+      setCaptions((prevCaptions) => {
+        // 新しい字幕を処理する
+        const updatedCaptions = [...prevCaptions];
+        
+        newCaptions.forEach((newCaption) => {
+          // 同じタイムスタンプと話者を持つ字幕を検索
+          const existingIndex = updatedCaptions.findIndex(
+            (caption) => 
+              caption.timestamp === newCaption.timestamp && 
+              caption.speaker === newCaption.speaker
+          );
+          
+          if (existingIndex !== -1) {
+            // 既存の字幕が見つかった場合は更新
+            updatedCaptions[existingIndex] = newCaption;
+          } else {
+            // 新しい字幕を追加
+            updatedCaptions.push(newCaption);
+          }
+        });
+        
+        return updatedCaptions;
+      });
     };
 
     // 字幕コンテナを監視
     // TODO: オブサーブの仕組み
     observePageForCaptionContainer(() => {
-      console.log("字幕コンテナが見つかりました。監視を開始します。");
-      const observer = observeCaptionChanges(handleCaptions);
+      observeCaptionChanges(handleCaptions);
     });
   }, []);
 
@@ -50,7 +71,7 @@ const CaptionAssistantUI: React.FC = () => {
     <>
       {/* 字幕有効化リマインダー */}
       {isMeetingStarted && !isCaptionsEnabled && (
-        <CaptionEnableReminderBanner onClose={() => setIsOpen(false)} />
+        <CaptionEnableReminderToast onClose={() => setIsOpen(false)} />
       )}
 
       {/* トグルボタン */}
@@ -143,20 +164,3 @@ export const injectUI = () => {
     );
   }
 };
-
-// TODO: だめかも
-// const checkIsMeetingStarted = () => {
-//   // まず、URLがGoogle Meetのミーティングパターンに一致するか確認
-//   const url = window.location.href;
-//   // クエリパラメータを無視するために、?より前の部分だけを取得
-//   const baseUrl = url.split("?")[0];
-//   const meetPattern =
-//     /https:\/\/meet\.google\.com\/[a-z0-9]{3}-[a-z0-9]{4}-[a-z0-9]{3}/;
-
-//   if (!meetPattern.test(baseUrl)) {
-//     console.log("Meet Caption Assistant: ミーティングURLではありません", url);
-//     return false;
-//   }
-
-//   return true;
-// };
