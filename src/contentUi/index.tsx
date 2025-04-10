@@ -24,15 +24,8 @@ const CaptionAssistantUI: React.FC = () => {
   // const isMeetingStarted = getMeetingTitle() !== null;
   const isMeetingStarted = true;
 
-  console.log("captions", captions);
-  console.log("isMeetingStarted", isMeetingStarted);
-
   // キャプションデータを取得する
   useEffect(() => {
-    console.log(
-      "Reactコンポーネントがマウントされました。字幕監視を開始します。"
-    );
-
     // 字幕を処理するコールバック関数
     const handleCaptions = (newCaptions: CaptionData[]) => {
       setCaptions((prevCaptions) => {

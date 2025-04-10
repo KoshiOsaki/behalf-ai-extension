@@ -167,23 +167,6 @@ const SideDrawer: React.FC<Props> = ({
             >
               エクスポート
             </button>
-
-            <button
-              style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "#e5e7eb",
-                color: "#374151",
-                borderRadius: "0.25rem",
-                border: "none",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                // 履歴をクリア
-                chrome.runtime.sendMessage({ type: "CLEAR_CAPTIONS" });
-              }}
-            >
-              クリア
-            </button>
           </div>
         </div>
       </div>
