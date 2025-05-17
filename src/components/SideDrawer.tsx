@@ -26,6 +26,9 @@ const SideDrawer: React.FC<Props> = ({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [apiKeyExists, setApiKeyExists] = useState<boolean>(false);
   const [showApiKeyInfo, setShowApiKeyInfo] = useState<boolean>(false);
+  const [notionSettings, setNotionSettings] = useState<{secret: string; databaseId: string} | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState<{success: boolean; message: string} | null>(null);
   
   // 発言候補を生成する関数
   const handleGenerateSuggestions = async () => {
@@ -90,24 +93,32 @@ const SideDrawer: React.FC<Props> = ({
     };
   }, [isOpen, onClose]);
 
-  // APIキーの存在確認
+  // APIキーとNotion設定の存在確認
   useEffect(() => {
-    const checkApiKey = async () => {
-      const storage = await chrome.storage.local.get(['geminiApiKey']);
+    const checkSettings = async () => {
+      const storage = await chrome.storage.local.get(['geminiApiKey', 'notion']);
       setApiKeyExists(!!storage.geminiApiKey);
+      setNotionSettings(storage.notion || null);
     };
     
     // 初期確認
-    checkApiKey();
+    checkSettings();
     
     // ストレージの変更を監視
     const handleStorageChange = (changes: {[key: string]: chrome.storage.StorageChange}, areaName: string) => {
-      if (areaName === 'local' && changes.geminiApiKey) {
-        // APIキーが変更された場合
-        setApiKeyExists(!!changes.geminiApiKey.newValue);
-        // APIキーが設定された場合、情報表示を閉じる
-        if (changes.geminiApiKey.newValue) {
-          setShowApiKeyInfo(false);
+      if (areaName === 'local') {
+        if (changes.geminiApiKey) {
+          // APIキーが変更された場合
+          setApiKeyExists(!!changes.geminiApiKey.newValue);
+          // APIキーが設定された場合、情報表示を閉じる
+          if (changes.geminiApiKey.newValue) {
+            setShowApiKeyInfo(false);
+          }
+        }
+        
+        if (changes.notion) {
+          // Notion設定が変更された場合
+          setNotionSettings(changes.notion.newValue || null);
         }
       }
     };
@@ -400,6 +411,7 @@ const SideDrawer: React.FC<Props> = ({
             style={{
               display: "flex",
               justifyContent: "space-between",
+              gap: "0.5rem",
             }}
           >
             <button
@@ -415,9 +427,68 @@ const SideDrawer: React.FC<Props> = ({
                 exportCaptionsToMarkdown(captions);
               }}
             >
-              エクスポート
+              Markdownエクスポート
+            </button>
+            
+            <button
+              style={{
+                padding: "0.5rem 1rem",
+                backgroundColor: notionSettings ? "#4f46e5" : "#9ca3af",
+                color: "white",
+                borderRadius: "0.25rem",
+                border: "none",
+                cursor: notionSettings ? "pointer" : "not-allowed",
+                opacity: notionSettings ? 1 : 0.7,
+              }}
+              disabled={!notionSettings}
+              title={notionSettings ? "Notionにエクスポート" : "Notion連携が未設定です"}
+              onClick={() => {
+                if (!notionSettings) return;
+                
+                setIsExporting(true);
+                setExportStatus(null);
+                
+                // 会議タイトルを取得（例: ページタイトルから）
+                const meetingTitle = document.title || '会議_' + new Date().toISOString().split('T')[0];
+                
+                chrome.runtime.sendMessage({
+                  type: "NOTION_EXPORT",
+                  payload: { captions, meetingTitle },
+                }, (res) => {
+                  setIsExporting(false);
+                  if (res.ok) {
+                    setExportStatus({ success: true, message: "Notionに保存しました" });
+                  } else {
+                    setExportStatus({ success: false, message: `失敗: ${res.error}` });
+                  }
+                  
+                  // 5秒後にステータスをクリア
+                  setTimeout(() => {
+                    setExportStatus(null);
+                  }, 5000);
+                });
+              }}
+            >
+              {isExporting ? "保存中..." : "Notionエクスポート"}
             </button>
           </div>
+          
+          {/* エクスポートステータスの表示 */}
+          {exportStatus && (
+            <div
+              style={{
+                marginTop: "0.5rem",
+                padding: "0.5rem",
+                backgroundColor: exportStatus.success ? "#ecfdf5" : "#fef2f2",
+                borderRadius: "0.25rem",
+                color: exportStatus.success ? "#065f46" : "#991b1b",
+                fontSize: "0.875rem",
+                textAlign: "center",
+              }}
+            >
+              {exportStatus.message}
+            </div>
+          )}
         </div>
       </div>
     </div>

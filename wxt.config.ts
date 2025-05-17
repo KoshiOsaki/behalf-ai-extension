@@ -17,6 +17,9 @@ export default defineConfig({
       type: "module",
     },
     permissions: ["storage"],
-    host_permissions: ["https://generativelanguage.googleapis.com/*"],
+    host_permissions: [
+      "https://generativelanguage.googleapis.com/*",
+      "https://api.notion.com/*"
+    ],
   },
 });
