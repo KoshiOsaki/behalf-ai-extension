@@ -1,9 +1,8 @@
-import { injectUI } from "@/src/contentUi";
+import { injectUI } from "@/src/components/CaptionAssistantUI";
 
 export default defineContentScript({
   matches: ["*://*.meet.google.com/*"],
   main() {
-    console.log("hello meet");
     injectUI();
   },
 });

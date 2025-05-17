@@ -1,23 +1,7 @@
 プロジェクト構造
 概要
 Meet Caption Assistant は、最新の React/TypeScript のベスト プラクティスに従って構造化されており、懸念事項を分離する論理ディレクトリに整理されています。拡張機能は Chrome 拡張機能の開発に WXT を使用し、ブラウザー拡張機能を構築するための合理的なアプローチを提供します。
-ディレクトリ構造
-著作権 meet-caption-assistant/
-├── docs/ # Documentation
-├── src/ # Source code
-│ ├── assets/ # Static assets
-│ ├── components/ # React components
-│ ├── hooks/ # Custom React hooks
-│ ├── types/ # TypeScript type definitions
-│ ├── utils/ # Utility functions
-│ ├── background.ts # Extension background script
-│ ├── content.tsx # Content script for Google Meet page
-│ └── popup.tsx # Extension popup UI
-├── .env.example # Example environment variables
-├── package.json # Project dependencies and scripts
-├── tsconfig.json # TypeScript configuration
-├── wxt.config.ts # WXT configuration
-└── README.md # Project overview
+
 ディレクトリの詳細
 /docs
 プロジェクトの詳細なドキュメントが含まれています。プロジェクトの概要、構造、タスクに関するファイルが含まれています。このディレクトリは、新しい開発者がプロ ​​ ジェクトをすばやく理解するために不可欠であり、すべてのプロジェクト関連ドキュメントの中心的な場所として機能します。

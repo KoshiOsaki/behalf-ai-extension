@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import SideDrawer from "../components/SideDrawer";
-import CaptionsList from "../components/CaptionsList";
+import SideDrawer from "./SideDrawer";
+import CaptionsList from "./CaptionsList";
 import { CaptionData } from "../types";
-import { CaptionEnableReminderToast } from "../components/CaptionEnableReminderToast";
+import { CaptionEnableReminderToast } from "./CaptionEnableReminderToast";
 import {
   observeCaptionChanges,
   observePageForCaptionContainer,
