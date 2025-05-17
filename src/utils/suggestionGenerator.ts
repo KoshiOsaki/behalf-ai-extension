@@ -1,10 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
 import { CaptionData } from "../types";
-
-// Gemini APIのキー（Chrome拡張機能の設定から取得）
-// 実装上はハードコードしていますが、実際の実装ではChromeのストレージAPIなどを使用して取得するようにします
-// 例: chrome.storage.local.get(['geminiApiKey'], (result) => { ... })
-const API_KEY = "AIzaSyBbFqQdrr8uGw88cVIxUY7XAJEpV9DNcpQ";
 
 /**
  * プロンプトテンプレートを取得する
@@ -51,14 +45,6 @@ export async function generateSuggestions(
   count: number = 2
 ): Promise<string[]> {
   try {
-    if (!API_KEY) {
-      console.error("Gemini API キーが設定されていません");
-      return [];
-    }
-
-    // APIクライアントの初期化
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
-
     // 会話履歴の構築
     const conversationHistory = captions
       .map((caption) => `${caption.speaker}: ${caption.text}`)
@@ -71,42 +57,22 @@ export async function generateSuggestions(
       conversationHistory
     );
 
-    // Gemini APIを呼び出し
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
+    // バックグラウンドスクリプトにメッセージを送信してGemini APIを呼び出す
+    const response = await chrome.runtime.sendMessage({
+      type: "call-gemini",
+      data: {
+        prompt,
+        count
+      }
     });
 
-    // レスポンスからテキストを取得
-    const responseText =
-      response.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    // JSON形式の文字列を抽出
-    const jsonMatch =
-      responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
-      responseText.match(/\[\s*".*"\s*,\s*".*"\s*\]/);
-
-    if (jsonMatch) {
-      try {
-        // JSONをパース
-        const suggestions = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-        return Array.isArray(suggestions) ? suggestions.slice(0, count) : [];
-      } catch (e) {
-        console.error("JSONのパースに失敗しました:", e);
-        return [];
-      }
+    // エラーチェック
+    if (response.error) {
+      console.error("Gemini API エラー:", response.error);
+      return [];
     }
 
-    // JSON形式でない場合は行ごとに分割して返す
-    return responseText
-      .split(/\n+/)
-      .filter(
-        (line: string) =>
-          line.trim().length > 0 &&
-          !line.startsWith("#") &&
-          !line.startsWith("```")
-      )
-      .slice(0, count);
+    return Array.isArray(response) ? response : [];
   } catch (error) {
     console.error("発言候補の生成中にエラーが発生しました:", error);
     return [];
