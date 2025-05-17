@@ -21,7 +21,6 @@ const CaptionAssistantUI: React.FC = () => {
   >(undefined);
 
   const isCaptionsEnabled = isCheckCaptionActive() || captions.length > 0;
-  console.log("isCaptionsEnabled", captions.length);
   // const isMeetingStarted = getMeetingTitle() !== null;
   const isMeetingStarted = true;
 

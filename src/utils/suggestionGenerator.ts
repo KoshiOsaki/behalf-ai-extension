@@ -1,24 +1,43 @@
 import { GoogleGenAI } from "@google/genai";
 import { CaptionData } from "../types";
-import * as fs from "fs";
-import * as path from "path";
 
-// Gemini APIのキー（環境変数から取得）
-const API_KEY = process.env.GEMINI_API_KEY || "";
+// Gemini APIのキー（Chrome拡張機能の設定から取得）
+// 実装上はハードコードしていますが、実際の実装ではChromeのストレージAPIなどを使用して取得するようにします
+// 例: chrome.storage.local.get(['geminiApiKey'], (result) => { ... })
+const API_KEY = "AIzaSyBbFqQdrr8uGw88cVIxUY7XAJEpV9DNcpQ";
 
 /**
- * プロンプトテンプレートを読み込む
+ * プロンプトテンプレートを取得する
  * @returns プロンプトテンプレート
  */
 function loadPromptTemplate(): string {
-  try {
-    // 拡張機能のコンテキストでファイルを読み込むための処理
-    // ブラウザ環境では直接ファイルを読み込めないため、ビルド時に埋め込む必要がある
-    // webpack等のバンドラーでこのファイルを文字列として埋め込む設定が必要
-    return require("../prompts/suggestionPrompt.md");
-  } catch (error) {
-    throw error;
-  }
+  // プロンプトを直接文字列として定義
+  return `
+# 発言候補生成プロンプト
+
+以下は会議の会話履歴です：
+
+{conversationHistory}
+
+## 指示
+
+あなたは会議の参加者として、次の発言として適切な候補を考えてください。
+会議の文脈を理解し、話者の役割や立場を考慮した上で、自然で建設的な発言を提案してください。
+各候補は簡潔で、会議の進行に貢献するものにしてください。
+
+## 出力フォーマット
+
+以下の形式で2つの発言候補を出力してください：
+
+\`\`\`json
+[
+  "最初の発言候補をここに記入してください。簡潔で具体的な内容にしてください。",
+  "2つ目の発言候補をここに記入してください。1つ目とは異なる視点や内容にしてください。"
+]
+\`\`\`
+
+注意：JSON形式で出力し、余分なテキストは含めないでください。
+  `;
 }
 
 /**
