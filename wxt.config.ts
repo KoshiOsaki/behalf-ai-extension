@@ -5,20 +5,18 @@ export default defineConfig({
   extensionApi: "chrome",
   modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons"],
   manifest: {
-    name: "Meet Caption Assistant β",
-    description: "Meet Caption Assistant",
+    name: "Behalf AI extension",
+    description: "Behalf AI extension",
     version: "0.1.0",
     options_ui: {
       page: "options/index.html",
-      open_in_tab: true
+      open_in_tab: true,
     },
     background: {
       service_worker: "background.js",
-      type: "module"
+      type: "module",
     },
     permissions: ["storage"],
-    host_permissions: [
-      "https://generativelanguage.googleapis.com/*"
-    ]
+    host_permissions: ["https://generativelanguage.googleapis.com/*"],
   },
 });

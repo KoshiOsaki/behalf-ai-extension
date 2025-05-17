@@ -1,77 +1,121 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Meet Caption Assistant 設定</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f9fafb;
-    }
-    #app {
-      max-width: 600px;
-      margin: 0 auto;
-      background-color: white;
-      padding: 30px;
-      border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      color: #111827;
-      margin-top: 0;
-      margin-bottom: 24px;
-      font-size: 1.5rem;
-    }
-    label {
-      display: block;
-      margin-bottom: 20px;
-      font-weight: 500;
-      color: #374151;
-    }
-    input {
-      display: block;
-      width: 100%;
-      padding: 8px 12px;
-      margin-top: 6px;
-      border: 1px solid #d1d5db;
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    button {
-      background-color: #3b82f6;
-      color: white;
-      border: none;
-      padding: 10px 16px;
-      border-radius: 4px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    button:hover {
-      background-color: #2563eb;
-    }
-    #status {
-      margin-left: 12px;
-      color: #10b981;
-      font-weight: 500;
-    }
-  </style>
-</head>
-<body>
-  <div id="app">
-    <h1>Meet Caption Assistant 設定</h1>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Behalf AI 設定</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f9fafb;
+      }
+      #app {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: white;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      h1 {
+        color: #111827;
+        margin-top: 0;
+        margin-bottom: 24px;
+        font-size: 1.5rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 20px;
+        font-weight: 500;
+        color: #374151;
+      }
+      input {
+        display: block;
+        width: 100%;
+        padding: 8px 12px;
+        margin-top: 6px;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 14px;
+      }
+      button {
+        background-color: #3b82f6;
+        color: white;
+        border: none;
+        padding: 10px 16px;
+        border-radius: 4px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+      button:hover {
+        background-color: #2563eb;
+      }
+      #status {
+        margin-left: 12px;
+        color: #10b981;
+        font-weight: 500;
+      }
+      .info-box {
+        margin-top: 24px;
+        padding: 16px;
+        background-color: #f0f9ff;
+        border: 1px solid #bae6fd;
+        border-radius: 6px;
+      }
+      .info-box h2 {
+        margin-top: 0;
+        font-size: 1rem;
+        color: #0369a1;
+      }
+      .info-box p {
+        margin-bottom: 8px;
+        font-size: 0.875rem;
+        color: #0c4a6e;
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Behalf AI 設定</h1>
 
-    <label>
-      Gemini API Key
-      <input id="geminiKey" type="password" placeholder="AIzaSy..." />
-    </label>
+      <label>
+        Gemini API Key
+        <input id="geminiKey" type="password" placeholder="AIzaSy..." />
+      </label>
 
-    <button id="save">保存</button>
-    <span id="status"></span>
-  </div>
-  <script src="options.ts" type="module"></script>
-</body>
+      <button id="save">保存</button>
+      <span id="status"></span>
+
+      <div class="info-box">
+        <h2>APIキーの保存について</h2>
+        <p>
+          入力されたAPIキーは、お使いのブラウザの安全な保存領域（Chrome Storage
+          Local API）に保存されます。
+        </p>
+        <p>このデータは：</p>
+        <ul>
+          <li>
+            お使いのブラウザ内にのみ保存され、外部サーバーには送信されません
+          </li>
+          <li>他の拡張機能やWebサイトからアクセスすることはできません</li>
+          <li>この拡張機能を削除すると完全に削除されます</li>
+          <li>
+            Behalf
+            AI開発チームを含め、第三者がこのデータにアクセスすることはできません
+          </li>
+        </ul>
+        <p>
+          APIキーは発言候補の生成時にのみ使用され、Google
+          APIに直接送信されます。Behalf
+          AIのサーバーにAPIキーが送信されたり保存されたりすることはありません。
+        </p>
+      </div>
+    </div>
+    <script src="options.ts" type="module"></script>
+  </body>
 </html>

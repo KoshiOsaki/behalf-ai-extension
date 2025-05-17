@@ -15,6 +15,13 @@ export default defineBackground(() => {
         });
       return true; // 非同期応答のために必要
     }
+    
+    // オプションページを開くメッセージを処理
+    if (message.type === "open-options-page") {
+      chrome.runtime.openOptionsPage();
+      sendResponse({ success: true });
+      return true;
+    }
   });
 
   /**

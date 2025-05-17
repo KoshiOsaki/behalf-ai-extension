@@ -24,6 +24,8 @@ const SideDrawer: React.FC<Props> = ({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  const [apiKeyExists, setApiKeyExists] = useState<boolean>(false);
+  const [showApiKeyInfo, setShowApiKeyInfo] = useState<boolean>(false);
   
   // 発言候補を生成する関数
   const handleGenerateSuggestions = async () => {
@@ -44,6 +46,11 @@ const SideDrawer: React.FC<Props> = ({
     } else {
       setShowSuggestions(false);
     }
+  };
+
+  // APIキー情報表示の切り替え
+  const toggleApiKeyInfo = () => {
+    setShowApiKeyInfo(!showApiKeyInfo);
   };
 
   // ドロワーの外側をクリックした時に閉じる処理
@@ -82,6 +89,37 @@ const SideDrawer: React.FC<Props> = ({
       document.removeEventListener("keydown", handleEscKey);
     };
   }, [isOpen, onClose]);
+
+  // APIキーの存在確認
+  useEffect(() => {
+    const checkApiKey = async () => {
+      const storage = await chrome.storage.local.get(['geminiApiKey']);
+      setApiKeyExists(!!storage.geminiApiKey);
+    };
+    
+    // 初期確認
+    checkApiKey();
+    
+    // ストレージの変更を監視
+    const handleStorageChange = (changes: {[key: string]: chrome.storage.StorageChange}, areaName: string) => {
+      if (areaName === 'local' && changes.geminiApiKey) {
+        // APIキーが変更された場合
+        setApiKeyExists(!!changes.geminiApiKey.newValue);
+        // APIキーが設定された場合、情報表示を閉じる
+        if (changes.geminiApiKey.newValue) {
+          setShowApiKeyInfo(false);
+        }
+      }
+    };
+    
+    // イベントリスナーを追加
+    chrome.storage.onChanged.addListener(handleStorageChange);
+    
+    // クリーンアップ関数
+    return () => {
+      chrome.storage.onChanged.removeListener(handleStorageChange);
+    };
+  }, []);
 
   return (
     <div
@@ -162,44 +200,122 @@ const SideDrawer: React.FC<Props> = ({
             borderBottom: "1px solid #e5e7eb",
           }}
         >
-          <button
-            onClick={handleGenerateSuggestions}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: "100%",
-              padding: "0.5rem",
-              backgroundColor: "#f3f4f6",
-              color: "#4b5563",
-              borderRadius: "0.25rem",
-              border: "none",
-              cursor: "pointer",
-              transition: "background-color 0.2s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = "#e5e7eb";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = "#f3f4f6";
-            }}
-          >
-            <span>発言候補を表示</span>
-            {isLoadingSuggestions && (
-              <span
+          <div>
+            <button
+              onClick={apiKeyExists ? handleGenerateSuggestions : () => {
+                // コンテンツスクリプトからはopenOptionsPageに直接アクセスできないため、
+                // メッセージパッシングを使用してバックグラウンドスクリプトに要求を送信
+                chrome.runtime.sendMessage({ type: "open-options-page" });
+              }}
+              style={{
+                padding: "0.5rem 1rem",
+                marginTop: "0.5rem",
+                backgroundColor: apiKeyExists ? "#f3f4f6" : "#f3f4f6",
+                color: apiKeyExists ? "#4b5563" : "#9ca3af",
+                borderRadius: "0.25rem",
+                border: "none",
+                cursor: apiKeyExists ? "pointer" : "default",
+                transition: "background-color 0.2s",
+                opacity: apiKeyExists ? 1 : 0.7,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: "100%"
+              }}
+              onMouseOver={(e) => {
+                if (apiKeyExists) {
+                  e.currentTarget.style.backgroundColor = "#e5e7eb";
+                }
+              }}
+              onMouseOut={(e) => {
+                if (apiKeyExists) {
+                  e.currentTarget.style.backgroundColor = "#f3f4f6";
+                }
+              }}
+              disabled={!apiKeyExists}
+            >
+              <span>発言候補を表示</span>
+              {isLoadingSuggestions && (
+                <span
+                  style={{
+                    marginLeft: "0.5rem",
+                    display: "inline-block",
+                    width: "1rem",
+                    height: "1rem",
+                    borderRadius: "50%",
+                    border: "2px solid #e5e7eb",
+                    borderTopColor: "#3b82f6",
+                    animation: "spin 1s linear infinite",
+                  }}
+                />
+              )}
+              {!apiKeyExists && (
+                <svg
+                  style={{
+                    marginLeft: "0.5rem",
+                    width: "1rem",
+                    height: "1rem",
+                  }}
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              )}
+            </button>
+            
+            {!apiKeyExists && (
+              <div
                 style={{
-                  marginLeft: "0.5rem",
-                  display: "inline-block",
-                  width: "1rem",
-                  height: "1rem",
-                  borderRadius: "50%",
-                  border: "2px solid #e5e7eb",
-                  borderTopColor: "#3b82f6",
-                  animation: "spin 1s linear infinite",
+                  marginTop: "0.75rem",
+                  padding: "0.75rem",
+                  backgroundColor: "#f0f9ff",
+                  borderRadius: "0.375rem",
+                  border: "1px solid #bae6fd",
+                  fontSize: "0.75rem",
+                  color: "#0c4a6e",
+                  lineHeight: 1.5
                 }}
-              />
+              >
+                <p style={{ marginBottom: "0.5rem" }}>
+                  発言候補を表示するには、Gemini APIキーの設定が必要です。
+                </p>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center"
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      // コンテンツスクリプトからはopenOptionsPageに直接アクセスできないため、
+                      // メッセージパッシングを使用してバックグラウンドスクリプトに要求を送信
+                      chrome.runtime.sendMessage({ type: "open-options-page" });
+                    }}
+                    style={{
+                      padding: "0.25rem 0.75rem",
+                      backgroundColor: "#0284c7",
+                      color: "white",
+                      borderRadius: "0.25rem",
+                      border: "none",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                      fontWeight: 500
+                    }}
+                  >
+                    設定ページを開く
+                  </button>
+                </div>
+              </div>
             )}
-          </button>
+          </div>
         </div>
 
         {/* 発言候補のポップオーバー */}
