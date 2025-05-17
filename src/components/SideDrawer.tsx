@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { CaptionData } from "../types";
 import { exportCaptionsToMarkdown } from "../utils/caption";
+import { generateSuggestions } from "../utils/suggestionGenerator";
 
 type Props = {
   captions: CaptionData[];
@@ -20,6 +21,30 @@ const SideDrawer: React.FC<Props> = ({
   children,
 }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
+  
+  // 発言候補を生成する関数
+  const handleGenerateSuggestions = async () => {
+    if (!showSuggestions) {
+      setShowSuggestions(true);
+      setIsLoadingSuggestions(true);
+      
+      try {
+        // 発言候補を生成
+        const generatedSuggestions = await generateSuggestions(captions);
+        setSuggestions(generatedSuggestions);
+      } catch (error) {
+        console.error("発言候補の生成中にエラーが発生しました:", error);
+        setSuggestions([]);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    } else {
+      setShowSuggestions(false);
+    }
+  };
 
   // ドロワーの外側をクリックした時に閉じる処理
   useEffect(() => {
@@ -129,6 +154,115 @@ const SideDrawer: React.FC<Props> = ({
             </svg>
           </button>
         </div>
+
+        {/* 発言候補を表示ボタン */}
+        <div
+          style={{
+            padding: "0.5rem 1rem",
+            borderBottom: "1px solid #e5e7eb",
+          }}
+        >
+          <button
+            onClick={handleGenerateSuggestions}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: "100%",
+              padding: "0.5rem",
+              backgroundColor: "#f3f4f6",
+              color: "#4b5563",
+              borderRadius: "0.25rem",
+              border: "none",
+              cursor: "pointer",
+              transition: "background-color 0.2s",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = "#e5e7eb";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "#f3f4f6";
+            }}
+          >
+            <span>発言候補を表示</span>
+            {isLoadingSuggestions && (
+              <span
+                style={{
+                  marginLeft: "0.5rem",
+                  display: "inline-block",
+                  width: "1rem",
+                  height: "1rem",
+                  borderRadius: "50%",
+                  border: "2px solid #e5e7eb",
+                  borderTopColor: "#3b82f6",
+                  animation: "spin 1s linear infinite",
+                }}
+              />
+            )}
+          </button>
+        </div>
+
+        {/* 発言候補のポップオーバー */}
+        {showSuggestions && (
+          <div
+            style={{
+              padding: "1rem",
+              backgroundColor: "#ffffff",
+              borderBottom: "1px solid #e5e7eb",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+            }}
+          >
+            <h3
+              style={{
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                marginBottom: "0.5rem",
+                color: "#4b5563",
+              }}
+            >
+              あなたの発言候補
+            </h3>
+            <div>
+              {suggestions.length > 0 ? (
+                suggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      padding: "0.75rem",
+                      backgroundColor: "#f9fafb",
+                      borderRadius: "0.25rem",
+                      marginBottom: "0.5rem",
+                      cursor: "pointer",
+                      border: "1px solid #e5e7eb",
+                    }}
+                    onClick={() => {
+                      // クリップボードにコピー
+                      navigator.clipboard.writeText(suggestion);
+                      // コピー後にポップオーバーを閉じる
+                      setShowSuggestions(false);
+                    }}
+                  >
+                    {suggestion}
+                  </div>
+                ))
+              ) : (
+                <div
+                  style={{
+                    padding: "0.75rem",
+                    backgroundColor: "#f9fafb",
+                    borderRadius: "0.25rem",
+                    textAlign: "center",
+                    color: "#6b7280",
+                  }}
+                >
+                  {isLoadingSuggestions
+                    ? "候補を生成中..."
+                    : "発言候補を生成できませんでした"}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         <div
           style={{

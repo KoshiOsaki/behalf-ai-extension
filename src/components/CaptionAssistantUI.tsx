@@ -20,7 +20,8 @@ const CaptionAssistantUI: React.FC = () => {
     number | undefined
   >(undefined);
 
-  const isCaptionsEnabled = isCheckCaptionActive();
+  const isCaptionsEnabled = isCheckCaptionActive() || captions.length > 0;
+  console.log("isCaptionsEnabled", captions.length);
   // const isMeetingStarted = getMeetingTitle() !== null;
   const isMeetingStarted = true;
 
@@ -63,7 +64,7 @@ const CaptionAssistantUI: React.FC = () => {
   return (
     <>
       {/* 字幕有効化リマインダー */}
-      {isMeetingStarted && !isCaptionsEnabled && (
+      {isMeetingStarted && !isCaptionsEnabled && captions.length === 0 && (
         <CaptionEnableReminderToast onClose={() => setIsOpen(false)} />
       )}
 
@@ -141,6 +142,11 @@ export const injectUI = () => {
       font-family: 'Roboto', sans-serif;
       position: relative;
       z-index: 9999;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   `;
   document.head.appendChild(style);
