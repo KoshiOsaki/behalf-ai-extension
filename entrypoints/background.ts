@@ -3,7 +3,7 @@ import { defineBackground } from "wxt/sandbox";
 import { CaptionData } from "../src/types";
 
 export default defineBackground(() => {
-  console.log('Background service worker started', { id: browser.runtime.id });
+  console.log("Background service worker started", { id: browser.runtime.id });
 
   // メッセージリスナーを設定
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -16,7 +16,7 @@ export default defineBackground(() => {
         });
       return true; // 非同期応答のために必要
     }
-    
+
     // オプションページを開くメッセージを処理
     if (message.type === "open-options-page") {
       chrome.runtime.openOptionsPage();
@@ -26,7 +26,10 @@ export default defineBackground(() => {
 
     // Notionエクスポートのメッセージを処理
     if (message.type === "NOTION_EXPORT") {
-      saveCaptionsToNotion(message.payload.captions, message.payload.meetingTitle)
+      saveCaptionsToNotion(
+        message.payload.captions,
+        message.payload.meetingTitle
+      )
         .then(() => sendResponse({ ok: true }))
         .catch((error) => {
           console.error("Notionエクスポートエラー:", error);
@@ -41,14 +44,19 @@ export default defineBackground(() => {
    * @param data - APIに送信するデータ
    * @returns 生成された発言候補の配列
    */
-  async function handleGeminiCall(data: { prompt: string; count?: number }): Promise<string[]> {
+  async function handleGeminiCall(data: {
+    prompt: string;
+    count?: number;
+  }): Promise<string[]> {
     try {
       // ストレージからAPIキーを取得
-      const storage = await chrome.storage.local.get(['geminiApiKey']);
+      const storage = await chrome.storage.local.get(["geminiApiKey"]);
       const apiKey = storage.geminiApiKey;
 
       if (!apiKey) {
-        throw new Error("Gemini API キーが設定されていません。オプションページで設定してください。");
+        throw new Error(
+          "Gemini API キーが設定されていません。オプションページで設定してください。"
+        );
       }
 
       // APIクライアントの初期化
@@ -61,18 +69,21 @@ export default defineBackground(() => {
       });
 
       // レスポンスからテキストを取得
-      const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const responseText =
+        response.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
       // JSON形式の文字列を抽出
-      const jsonMatch = 
-        responseText.match(/```json\s*([\s\S]*?)\s*```/) || 
+      const jsonMatch =
+        responseText.match(/```json\s*([\s\S]*?)\s*```/) ||
         responseText.match(/\[\s*".*"\s*,\s*".*"\s*\]/);
 
       if (jsonMatch) {
         try {
           // JSONをパース
           const suggestions = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-          return Array.isArray(suggestions) ? suggestions.slice(0, data.count || 2) : [];
+          return Array.isArray(suggestions)
+            ? suggestions.slice(0, data.count || 2)
+            : [];
         } catch (e) {
           console.error("JSONのパースに失敗しました:", e);
           return [];
@@ -105,34 +116,34 @@ export default defineBackground(() => {
     meetingTitle: string
   ): Promise<void> {
     // Notionの設定を取得
-    const { notion } = await chrome.storage.local.get('notion') as {
+    const { notion } = (await chrome.storage.local.get("notion")) as {
       notion?: { secret: string; databaseId: string };
     };
 
     // 設定が存在しない場合はエラー
     if (!notion?.secret || !notion?.databaseId) {
-      throw new Error('Notion未連携。オプションページで設定してください。');
+      throw new Error("Notion未連携。オプションページで設定してください。");
     }
 
     // 字幕データを10分ごとにグループ化
     const grouped = groupBy10min(captions);
-    
+
     // Notionのブロックを構築
     const children = buildBlocks(grouped);
 
     // Notion APIを呼び出してページを作成
-    const response = await fetch('https://api.notion.com/v1/pages', {
-      method: 'POST',
+    const response = await fetch("https://api.notion.com/v1/pages", {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${notion.secret}`,
-        'Content-Type': 'application/json',
-        'Notion-Version': '2022-06-28',
+        Authorization: `Bearer ${notion.secret}`,
+        "Content-Type": "application/json",
+        "Notion-Version": "2022-06-28",
       },
       body: JSON.stringify({
         parent: { database_id: notion.databaseId },
         properties: {
-          Title: { title: [{ text: { content: meetingTitle } }] },
-          Date: { date: { start: new Date().toISOString().split('T')[0] } },
+          名前: { title: [{ text: { content: meetingTitle } }] },
+          Date: { date: { start: new Date().toISOString().split("T")[0] } },
         },
         children,
       }),
@@ -141,7 +152,9 @@ export default defineBackground(() => {
     // レスポンスが正常でない場合はエラー
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(`Notion API エラー: ${errorData.message || response.statusText}`);
+      throw new Error(
+        `Notion API エラー: ${errorData.message || response.statusText}`
+      );
     }
   }
 
@@ -150,9 +163,11 @@ export default defineBackground(() => {
    * @param captions - 字幕データの配列
    * @returns グループ化された字幕データ
    */
-  function groupBy10min(captions: CaptionData[]): Record<string, CaptionData[]> {
+  function groupBy10min(
+    captions: CaptionData[]
+  ): Record<string, CaptionData[]> {
     const grouped: Record<string, CaptionData[]> = {};
-    
+
     for (const caption of captions) {
       // タイムスタンプから時間を抽出（例: '09:30'）
       const date = new Date(caption.timestamp);
@@ -161,15 +176,17 @@ export default defineBackground(() => {
       // 10分単位に丸める
       const roundedMinutes = Math.floor(minutes / 10) * 10;
       // フォーマットされた時間（例: '09:30'）
-      const formattedTime = `${hours.toString().padStart(2, '0')}:${roundedMinutes.toString().padStart(2, '0')}`;
-      
+      const formattedTime = `${hours
+        .toString()
+        .padStart(2, "0")}:${roundedMinutes.toString().padStart(2, "0")}`;
+
       if (!grouped[formattedTime]) {
         grouped[formattedTime] = [];
       }
-      
+
       grouped[formattedTime].push(caption);
     }
-    
+
     return grouped;
   }
 
@@ -180,32 +197,34 @@ export default defineBackground(() => {
    */
   function buildBlocks(groupedCaptions: Record<string, CaptionData[]>): any[] {
     const blocks: any[] = [];
-    
+
     // 時間順にソート
     const times = Object.keys(groupedCaptions).sort();
-    
+
     for (const time of times) {
       // 時間の見出しを追加
       blocks.push({
-        object: 'block',
-        type: 'heading_2',
+        object: "block",
+        type: "heading_2",
         heading_2: {
-          rich_text: [{ text: { content: time } }]
-        }
+          rich_text: [{ text: { content: time } }],
+        },
       });
-      
+
       // その時間帯の字幕を追加
       for (const caption of groupedCaptions[time]) {
         blocks.push({
-          object: 'block',
-          type: 'paragraph',
+          object: "block",
+          type: "paragraph",
           paragraph: {
-            rich_text: [{ text: { content: `${caption.speaker}: ${caption.text}` } }]
-          }
+            rich_text: [
+              { text: { content: `${caption.speaker}: ${caption.text}` } },
+            ],
+          },
         });
       }
     }
-    
+
     return blocks;
   }
 });

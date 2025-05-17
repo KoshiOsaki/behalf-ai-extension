@@ -9,14 +9,15 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
         margin: 0;
-        padding: 20px;
+        padding: 30px;
         background-color: #f9fafb;
+        min-height: 100vh;
       }
       #app {
-        max-width: 600px;
+        max-width: 1000px;
         margin: 0 auto;
         background-color: white;
-        padding: 30px;
+        padding: 40px 50px;
         border-radius: 8px;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
       }
@@ -28,7 +29,7 @@
       }
       label {
         display: block;
-        margin-bottom: 20px;
+        margin-bottom: 30px;
         font-weight: 500;
         color: #374151;
       }
@@ -82,27 +83,6 @@
   <body>
     <div id="app">
       <h1>Behalf AI 設定</h1>
-
-      <label>
-        Gemini API Key
-        <input id="geminiKey" type="password" placeholder="AIzaSy..." />
-      </label>
-
-      <h2 style="margin-top: 24px; margin-bottom: 12px; font-size: 1.2rem; color: #111827;">Notion連携設定</h2>
-      
-      <label>
-        Notion Integration Secret
-        <input id="notionSecret" type="password" placeholder="secret_xxx..." />
-      </label>
-
-      <label>
-        Notion Database ID
-        <input id="notionDatabaseId" type="text" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
-      </label>
-
-      <button id="save">保存</button>
-      <span id="status"></span>
-
       <div class="info-box">
         <h2>APIキーの保存について</h2>
         <p>
@@ -127,6 +107,78 @@
           AIのサーバーにAPIキーが送信されたり保存されたりすることはありません。
         </p>
       </div>
+      <label>
+        Gemini API Key
+        <input id="geminiKey" type="password" placeholder="AIzaSy..." />
+      </label>
+
+      <div class="info-box" style="margin-bottom: 20px">
+        <h2>✅ Notion 連携手順</h2>
+        <ol style="padding-left: 20px; margin-top: 10px">
+          <li>
+            <strong>データベース作成</strong><br />
+            例:「Behalf AI DB」を新規作成
+          </li>
+          <li>
+            <strong>Integration 作成</strong><br />
+            <a href="https://www.notion.com/my-integrations" target="_blank"
+              >https://www.notion.com/my-integrations</a
+            >
+            にアクセスし「+ New integration」<br />
+            任意の名前（例: Behalf AI integration）、Internal を選択<br />
+            読み取り・更新・挿入権限を付与し、Secret を取得
+          </li>
+          <li>
+            <strong>Database ID 取得（詳細説明）</strong><br />
+            作成したデータベースを クリックして開く<br />
+            右上「…」メニュー → 「ページとして開く（フルページ表示）」
+            をクリック<br />
+            （ビューが 1 ページとして表示される状態になります）<br />
+            ブラウザの URL を確認<br />
+            <pre
+              style="
+                background-color: #f1f5f9;
+                padding: 8px;
+                border-radius: 4px;
+                overflow-x: auto;
+              "
+            >
+https://www.notion.so/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</pre
+            >
+            <code>xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code> の 32桁の英数字部分 が
+            Database ID です。<br />
+            例: 1f6936f7c1308046a4ead0b155ed6f53
+          </li>
+          <li>
+            <strong>Integration 共有設定</strong><br />
+            右上「…」→ 接続 → 作成した Integration を選択し 追加
+          </li>
+          <li>
+            <strong>Behalf AI 拡張機能設定</strong><br />
+            Options ページで<br />
+            取得した Secret<br />
+            取得した Database ID<br />
+            を入力
+          </li>
+        </ol>
+      </div>
+
+      <label>
+        Notion Integration Secret
+        <input id="notionSecret" type="password" placeholder="secret_xxx..." />
+      </label>
+
+      <label>
+        Notion Database ID
+        <input
+          id="notionDatabaseId"
+          type="text"
+          placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        />
+      </label>
+
+      <button id="save">保存</button>
+      <span id="status"></span>
     </div>
     <script src="options.ts" type="module"></script>
   </body>

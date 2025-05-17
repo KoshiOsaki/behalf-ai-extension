@@ -26,16 +26,22 @@ const SideDrawer: React.FC<Props> = ({
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [apiKeyExists, setApiKeyExists] = useState<boolean>(false);
   const [showApiKeyInfo, setShowApiKeyInfo] = useState<boolean>(false);
-  const [notionSettings, setNotionSettings] = useState<{secret: string; databaseId: string} | null>(null);
+  const [notionSettings, setNotionSettings] = useState<{
+    secret: string;
+    databaseId: string;
+  } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [exportStatus, setExportStatus] = useState<{success: boolean; message: string} | null>(null);
-  
+  const [exportStatus, setExportStatus] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
   // 発言候補を生成する関数
   const handleGenerateSuggestions = async () => {
     if (!showSuggestions) {
       setShowSuggestions(true);
       setIsLoadingSuggestions(true);
-      
+
       try {
         // 発言候補を生成
         const generatedSuggestions = await generateSuggestions(captions);
@@ -96,17 +102,23 @@ const SideDrawer: React.FC<Props> = ({
   // APIキーとNotion設定の存在確認
   useEffect(() => {
     const checkSettings = async () => {
-      const storage = await chrome.storage.local.get(['geminiApiKey', 'notion']);
+      const storage = await chrome.storage.local.get([
+        "geminiApiKey",
+        "notion",
+      ]);
       setApiKeyExists(!!storage.geminiApiKey);
       setNotionSettings(storage.notion || null);
     };
-    
+
     // 初期確認
     checkSettings();
-    
+
     // ストレージの変更を監視
-    const handleStorageChange = (changes: {[key: string]: chrome.storage.StorageChange}, areaName: string) => {
-      if (areaName === 'local') {
+    const handleStorageChange = (
+      changes: { [key: string]: chrome.storage.StorageChange },
+      areaName: string
+    ) => {
+      if (areaName === "local") {
         if (changes.geminiApiKey) {
           // APIキーが変更された場合
           setApiKeyExists(!!changes.geminiApiKey.newValue);
@@ -115,17 +127,17 @@ const SideDrawer: React.FC<Props> = ({
             setShowApiKeyInfo(false);
           }
         }
-        
+
         if (changes.notion) {
           // Notion設定が変更された場合
           setNotionSettings(changes.notion.newValue || null);
         }
       }
     };
-    
+
     // イベントリスナーを追加
     chrome.storage.onChanged.addListener(handleStorageChange);
-    
+
     // クリーンアップ関数
     return () => {
       chrome.storage.onChanged.removeListener(handleStorageChange);
@@ -213,11 +225,15 @@ const SideDrawer: React.FC<Props> = ({
         >
           <div>
             <button
-              onClick={apiKeyExists ? handleGenerateSuggestions : () => {
-                // コンテンツスクリプトからはopenOptionsPageに直接アクセスできないため、
-                // メッセージパッシングを使用してバックグラウンドスクリプトに要求を送信
-                chrome.runtime.sendMessage({ type: "open-options-page" });
-              }}
+              onClick={
+                apiKeyExists
+                  ? handleGenerateSuggestions
+                  : () => {
+                      // コンテンツスクリプトからはopenOptionsPageに直接アクセスできないため、
+                      // メッセージパッシングを使用してバックグラウンドスクリプトに要求を送信
+                      chrome.runtime.sendMessage({ type: "open-options-page" });
+                    }
+              }
               style={{
                 padding: "0.5rem 1rem",
                 marginTop: "0.5rem",
@@ -231,7 +247,7 @@ const SideDrawer: React.FC<Props> = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                width: "100%"
+                width: "100%",
               }}
               onMouseOver={(e) => {
                 if (apiKeyExists) {
@@ -281,7 +297,7 @@ const SideDrawer: React.FC<Props> = ({
                 </svg>
               )}
             </button>
-            
+
             {!apiKeyExists && (
               <div
                 style={{
@@ -292,7 +308,7 @@ const SideDrawer: React.FC<Props> = ({
                   border: "1px solid #bae6fd",
                   fontSize: "0.75rem",
                   color: "#0c4a6e",
-                  lineHeight: 1.5
+                  lineHeight: 1.5,
                 }}
               >
                 <p style={{ marginBottom: "0.5rem" }}>
@@ -301,7 +317,7 @@ const SideDrawer: React.FC<Props> = ({
                 <div
                   style={{
                     display: "flex",
-                    justifyContent: "center"
+                    justifyContent: "center",
                   }}
                 >
                   <button
@@ -318,7 +334,7 @@ const SideDrawer: React.FC<Props> = ({
                       border: "none",
                       cursor: "pointer",
                       fontSize: "0.75rem",
-                      fontWeight: 500
+                      fontWeight: 500,
                     }}
                   >
                     設定ページを開く
@@ -427,52 +443,97 @@ const SideDrawer: React.FC<Props> = ({
                 exportCaptionsToMarkdown(captions);
               }}
             >
-              Markdownエクスポート
+              Markdownダウンロード
             </button>
-            
-            <button
-              style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: notionSettings ? "#4f46e5" : "#9ca3af",
-                color: "white",
-                borderRadius: "0.25rem",
-                border: "none",
-                cursor: notionSettings ? "pointer" : "not-allowed",
-                opacity: notionSettings ? 1 : 0.7,
-              }}
-              disabled={!notionSettings}
-              title={notionSettings ? "Notionにエクスポート" : "Notion連携が未設定です"}
-              onClick={() => {
-                if (!notionSettings) return;
-                
-                setIsExporting(true);
-                setExportStatus(null);
-                
-                // 会議タイトルを取得（例: ページタイトルから）
-                const meetingTitle = document.title || '会議_' + new Date().toISOString().split('T')[0];
-                
-                chrome.runtime.sendMessage({
-                  type: "NOTION_EXPORT",
-                  payload: { captions, meetingTitle },
-                }, (res) => {
-                  setIsExporting(false);
-                  if (res.ok) {
-                    setExportStatus({ success: true, message: "Notionに保存しました" });
-                  } else {
-                    setExportStatus({ success: false, message: `失敗: ${res.error}` });
-                  }
-                  
-                  // 5秒後にステータスをクリア
-                  setTimeout(() => {
-                    setExportStatus(null);
-                  }, 5000);
-                });
-              }}
-            >
-              {isExporting ? "保存中..." : "Notionエクスポート"}
-            </button>
+
+            <div style={{ display: "flex", flexDirection: "column" }}>
+              <button
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: notionSettings ? "#4f46e5" : "#9ca3af",
+                  color: "white",
+                  borderRadius: "0.25rem",
+                  border: "none",
+                  cursor: notionSettings ? "pointer" : "not-allowed",
+                  opacity: notionSettings ? 1 : 0.7,
+                }}
+                disabled={!notionSettings}
+                title={
+                  notionSettings
+                    ? "Notionにエクスポート"
+                    : "Notion連携が未設定です"
+                }
+                onClick={() => {
+                  if (!notionSettings) return;
+
+                  setIsExporting(true);
+                  setExportStatus(null);
+
+                  // 会議タイトルを取得（例: ページタイトルから）
+                  const meetingTitle =
+                    document.title ||
+                    "会議_" + new Date().toISOString().split("T")[0];
+
+                  chrome.runtime.sendMessage(
+                    {
+                      type: "NOTION_EXPORT",
+                      payload: { captions, meetingTitle },
+                    },
+                    (res) => {
+                      setIsExporting(false);
+                      if (res.ok) {
+                        setExportStatus({
+                          success: true,
+                          message: "Notionに保存しました",
+                        });
+                      } else {
+                        setExportStatus({
+                          success: false,
+                          message: `失敗: ${res.error}`,
+                        });
+                      }
+
+                      // 5秒後にステータスをクリア
+                      setTimeout(() => {
+                        setExportStatus(null);
+                      }, 5000);
+                    }
+                  );
+                }}
+              >
+                {isExporting ? "保存中..." : "Notionエクスポート"}
+              </button>
+              
+              {!notionSettings && (
+                <div
+                  style={{
+                    marginTop: "0.5rem",
+                    fontSize: "0.75rem",
+                    color: "#6b7280",
+                    textAlign: "center",
+                  }}
+                >
+                  <button
+                    onClick={() => {
+                      chrome.runtime.sendMessage({ type: "open-options-page" });
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      padding: 0,
+                      color: "#4f46e5",
+                      textDecoration: "underline",
+                      cursor: "pointer",
+                      fontSize: "0.75rem",
+                    }}
+                  >
+                    Notion連携を設定する
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-          
+
           {/* エクスポートステータスの表示 */}
           {exportStatus && (
             <div
