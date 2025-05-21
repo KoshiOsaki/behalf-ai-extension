@@ -33,14 +33,29 @@ export const getMeetingTitle = () => {
 };
 
 export const findCaptionContainer = () => {
-  return document.querySelector('div[role="region"][aria-label="字幕"]');
+  // パターン1: role="region" と aria-label="字幕" を持つ要素
+  const captionByRole = document.querySelector(
+    'div[role="region"][aria-label="字幕"]'
+  );
+  if (captionByRole) return captionByRole;
+
+  // パターン2: 英語環境の場合 - role="region" と aria-label="Captions" を持つ要素
+  const captionByRoleEn = document.querySelector(
+    'div[role="region"][aria-label="Captions"]'
+  );
+  if (captionByRoleEn) return captionByRoleEn;
+
+  return null;
 };
 
 // 字幕データの中身を取得する
 export const getCaptionDataList = (): CaptionData[] => {
   // 「字幕」とラベル付けされた領域を取得
   const captionRegion = findCaptionContainer();
-  if (!captionRegion) return [];
+  if (!captionRegion) {
+    console.log("Meet Caption Assistant: 字幕領域が見つかりません");
+    return [];
+  }
 
   // ここでは、直下の子要素で、内部に img[data-iml] を含むものを字幕のエントリーとみなす
   const entries = Array.from(
