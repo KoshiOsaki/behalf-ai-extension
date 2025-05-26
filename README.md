@@ -1,3 +1,3 @@
-# WXT + React
+# Behalf AI Extension
 
-This template should help get you started developing with React in WXT.
+プロジェクトの詳細については[プロジェクト概要](docs/project.md)を参照してください。

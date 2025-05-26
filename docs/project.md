@@ -34,3 +34,7 @@ Google Meet のリアルタイム文字起こし機能を活用し、 次の発�
 ## 注意事項
 
 Chrome 拡張機能の環境では、Node.js 環境で使用できる`require`や`process.env`などが使用できないため、API Key の管理は Chrome のストレージ API を使用しています。
+
+![[Pasted image 20250527020633.png]]
+
+[画面収録 2025-05-17 21.12.08.mov](attachment:4dab5ecf-c692-452f-9433-f197d800a66f:%E7%94%BB%E9%9D%A2%E5%8F%8E%E9%8C%B2_2025-05-17_21.12.08.mov)
