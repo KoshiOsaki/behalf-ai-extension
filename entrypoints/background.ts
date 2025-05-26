@@ -127,7 +127,7 @@ export default defineBackground(() => {
     const grouped = groupBy10min(captions);
 
     // Notionのブロックを構築
-    const children = buildBlocks(grouped);
+    const allChildren = buildBlocks(grouped);
 
     // 同じタイトルのページを検索
     const searchResponse = await fetch(
@@ -176,16 +176,16 @@ export default defineBackground(() => {
     }
 
     const searchResults = await searchResponse.json();
-    let response;
+    let pageId: string;
 
     // 同じタイトルのページが存在する場合は更新、存在しない場合は新規作成
     if (searchResults.results && searchResults.results.length > 0) {
       // 既存のページを更新
-      const pageId = searchResults.results[0].id;
+      pageId = searchResults.results[0].id;
 
       // まず既存のページの子ブロックを取得
       const blocksResponse = await fetch(
-        `https://api.notion.com/v1/blocks/${pageId}/children`,
+        `https://api.notion.com/v1/blocks/${pageId}/children?page_size=100`,
         {
           method: "GET",
           headers: {
@@ -214,9 +214,48 @@ export default defineBackground(() => {
           },
         });
       }
+    } else {
+      // 新しいページを作成（最初は空のページを作成し、後でコンテンツを追加）
+      const createResponse = await fetch("https://api.notion.com/v1/pages", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${notion.secret}`,
+          "Content-Type": "application/json",
+          "Notion-Version": "2022-06-28",
+        },
+        body: JSON.stringify({
+          parent: { database_id: notion.databaseId },
+          properties: {
+            名前: { title: [{ text: { content: meetingTitle } }] },
+            Date: { date: { start: new Date().toISOString().split("T")[0] } },
+          },
+          // 空のchildrenで作成
+          children: [],
+        }),
+      });
 
-      // 新しいブロックを追加
-      response = await fetch(
+      if (!createResponse.ok) {
+        const errorData = await createResponse.json();
+        throw new Error(
+          `Notion ページ作成エラー: ${errorData.message || createResponse.statusText}`
+        );
+      }
+
+      const createResult = await createResponse.json();
+      pageId = createResult.id;
+    }
+
+    // childrenを100個ずつに分割して追加
+    const MAX_CHILDREN_PER_REQUEST = 100;
+    const childrenChunks: any[][] = [];
+    
+    for (let i = 0; i < allChildren.length; i += MAX_CHILDREN_PER_REQUEST) {
+      childrenChunks.push(allChildren.slice(i, i + MAX_CHILDREN_PER_REQUEST));
+    }
+
+    // 各チャンクを順番に追加
+    for (const children of childrenChunks) {
+      const response = await fetch(
         `https://api.notion.com/v1/blocks/${pageId}/children`,
         {
           method: "PATCH",
@@ -230,33 +269,14 @@ export default defineBackground(() => {
           }),
         }
       );
-    } else {
-      // 新しいページを作成
 
-      response = await fetch("https://api.notion.com/v1/pages", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${notion.secret}`,
-          "Content-Type": "application/json",
-          "Notion-Version": "2022-06-28",
-        },
-        body: JSON.stringify({
-          parent: { database_id: notion.databaseId },
-          properties: {
-            名前: { title: [{ text: { content: meetingTitle } }] },
-            Date: { date: { start: new Date().toISOString().split("T")[0] } },
-          },
-          children,
-        }),
-      });
-    }
-
-    // レスポンスが正常でない場合はエラー
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(
-        `Notion API エラー: ${errorData.message || response.statusText}`
-      );
+      // レスポンスが正常でない場合はエラー
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          `Notion API エラー: ${errorData.message || response.statusText}`
+        );
+      }
     }
   }
 

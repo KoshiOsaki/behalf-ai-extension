@@ -16,8 +16,12 @@ function loadPromptTemplate(): string {
 ## 指示
 
 あなたは会議の参加者として、次の発言として適切な候補を考えてください。
+会話全体を考慮しつつ、特に直近7ラリーの会話に注目して発言候補を生成してください。
 会議の文脈を理解し、話者の役割や立場を考慮した上で、自然で建設的な発言を提案してください。
 各候補は簡潔で、会議の進行に貢献するものにしてください。
+
+重要：直近7ラリーの会話で議論されているトピックや質問に対して、具体的に応答する内容を提案してください。
+会話の最新の流れを特に重視し、適切なフォローアップや新しい視点を提供してください。
 
 ## 出力フォーマット
 
@@ -25,8 +29,8 @@ function loadPromptTemplate(): string {
 
 \`\`\`json
 [
-  "最初の発言候補をここに記入してください。簡潔で具体的な内容にしてください。",
-  "2つ目の発言候補をここに記入してください。1つ目とは異なる視点や内容にしてください。"
+  "最初の発言候補をここに記入してください。簡潔で具体的な内容にしてください。直近の会話に直接関連する内容にしてください。",
+  "2つ目の発言候補をここに記入してください。1つ目とは異なる視点や内容にしてください。こちらも直近の会話に直接関連する内容にしてください。"
 ]
 \`\`\`
 
@@ -45,8 +49,17 @@ export async function generateSuggestions(
   count: number = 2
 ): Promise<string[]> {
   try {
-    // 会話履歴の構築
-    const conversationHistory = captions
+    // 会話履歴の構築（トークン節約のために最大ラリー数を制限）
+    // 約10分の会話量として最大ラリー数を設定（30ラリー程度）
+    const MAX_CONVERSATION_ENTRIES = 30;
+
+    // 最新のMAX_CONVERSATION_ENTRIES件の字幕データを取得
+    const limitedCaptions =
+      captions.length > MAX_CONVERSATION_ENTRIES
+        ? captions.slice(-MAX_CONVERSATION_ENTRIES)
+        : captions;
+
+    const conversationHistory = limitedCaptions
       .map((caption) => `${caption.speaker}: ${caption.text}`)
       .join("\n");
 
@@ -62,8 +75,8 @@ export async function generateSuggestions(
       type: "call-gemini",
       data: {
         prompt,
-        count
-      }
+        count,
+      },
     });
 
     // エラーチェック
