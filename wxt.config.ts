@@ -16,7 +16,7 @@ export default defineConfig({
       service_worker: "background.js",
       type: "module",
     },
-    permissions: ["storage"],
+    permissions: ["storage", "downloads"],
     host_permissions: [
       "https://generativelanguage.googleapis.com/*",
       "https://api.notion.com/*"

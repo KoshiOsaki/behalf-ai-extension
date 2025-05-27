@@ -430,21 +430,46 @@ const SideDrawer: React.FC<Props> = ({
               gap: "0.5rem",
             }}
           >
-            <button
+            <div
               style={{
-                padding: "0.5rem 1rem",
-                backgroundColor: "#3b82f6",
-                color: "white",
-                borderRadius: "0.25rem",
-                border: "none",
-                cursor: "pointer",
-              }}
-              onClick={() => {
-                exportCaptionsToMarkdown(captions);
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem",
               }}
             >
-              Markdownダウンロード
-            </button>
+              <button
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  borderRadius: "0.25rem",
+                  border: "none",
+                  cursor: "pointer",
+                }}
+                onClick={() => {
+                  exportCaptionsToMarkdown(captions, false);
+                }}
+              >
+                Markdownダウンロード
+              </button>
+              <button
+                style={{
+                  padding: "0.5rem 1rem",
+                  backgroundColor: "#60a5fa",
+                  color: "white",
+                  borderRadius: "0.25rem",
+                  border: "none",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                }}
+                onClick={() => {
+                  exportCaptionsToMarkdown(captions, true);
+                }}
+                title="保存先を選択してダウンロードします"
+              >
+                保存先を選択
+              </button>
+            </div>
 
             <div style={{ display: "flex", flexDirection: "column" }}>
               <button
@@ -503,7 +528,7 @@ const SideDrawer: React.FC<Props> = ({
               >
                 {isExporting ? "保存中..." : "Notionエクスポート"}
               </button>
-              
+
               {!notionSettings && (
                 <div
                   style={{

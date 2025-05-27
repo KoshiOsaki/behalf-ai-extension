@@ -93,8 +93,15 @@ export const observeCaptionChanges = (
   return observer;
 };
 
-// 字幕をマークダウンファイルとしてエクスポートする
-export const exportCaptionsToMarkdown = (captions: CaptionData[]): void => {
+/**
+ * 字幕をマークダウンファイルとしてエクスポートする
+ * @param captions 字幕データの配列
+ * @param saveAs 保存先を選択するダイアログを表示するかどうか
+ */
+export const exportCaptionsToMarkdown = (
+  captions: CaptionData[],
+  saveAs: boolean = false
+): void => {
   try {
     if (captions.length === 0) {
       console.warn("Meet Caption Assistant: エクスポートする字幕がありません");
@@ -103,7 +110,7 @@ export const exportCaptionsToMarkdown = (captions: CaptionData[]): void => {
 
     const meetingTitle = getMeetingTitle() || "会議";
     const today = getCurrentDate();
-    const fileName = `${meetingTitle}_${today}.md`;
+    const fileName = `${meetingTitle}_${today}`;
 
     // 時間ごとにグループ化する（10分間隔）
     const timeGroups: { [key: string]: CaptionExportData[] } = {};
@@ -141,14 +148,25 @@ export const exportCaptionsToMarkdown = (captions: CaptionData[]): void => {
         markdownContent += "\n \n";
       });
 
-    // ファイルとしてダウンロード
-    const blob = new Blob([markdownContent], {
-      type: "text/markdown;charset=utf-8",
-    });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = fileName;
-    link.click();
+    // バックグラウンドスクリプトにダウンロードリクエストを送信
+    chrome.runtime.sendMessage(
+      {
+        type: "download-markdown",
+        data: {
+          name: fileName,
+          content: markdownContent,
+          saveAs: saveAs,
+        },
+      },
+      (response) => {
+        if (response.error) {
+          console.error(
+            "Meet Caption Assistant: マークダウンのダウンロード中にエラーが発生しました",
+            response.error
+          );
+        }
+      }
+    );
   } catch (error) {
     console.error(
       "Meet Caption Assistant: 字幕のエクスポート中にエラーが発生しました",

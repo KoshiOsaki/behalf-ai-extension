@@ -5,6 +5,20 @@ import { CaptionData } from "../src/types";
 export default defineBackground(() => {
   // メッセージリスナーを設定
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    // マークダウンファイルのダウンロードメッセージを処理
+    if (message.type === "download-markdown") {
+      downloadMarkdown(
+        message.data.name,
+        message.data.content,
+        message.data.saveAs
+      )
+        .then(sendResponse)
+        .catch((error) => {
+          console.error("マークダウンダウンロードエラー:", error);
+          sendResponse({ error: error.message });
+        });
+      return true; // 非同期応答のために必要
+    }
     if (message.type === "call-gemini") {
       handleGeminiCall(message.data)
         .then(sendResponse)
@@ -198,12 +212,14 @@ export default defineBackground(() => {
       if (!blocksResponse.ok) {
         const errorData = await blocksResponse.json();
         throw new Error(
-          `ブロック取得エラー: ${errorData.message || blocksResponse.statusText}`
+          `ブロック取得エラー: ${
+            errorData.message || blocksResponse.statusText
+          }`
         );
       }
 
       const blocksData = await blocksResponse.json();
-      
+
       // 全ての子ブロックを削除
       for (const block of blocksData.results) {
         await fetch(`https://api.notion.com/v1/blocks/${block.id}`, {
@@ -237,7 +253,9 @@ export default defineBackground(() => {
       if (!createResponse.ok) {
         const errorData = await createResponse.json();
         throw new Error(
-          `Notion ページ作成エラー: ${errorData.message || createResponse.statusText}`
+          `Notion ページ作成エラー: ${
+            errorData.message || createResponse.statusText
+          }`
         );
       }
 
@@ -248,7 +266,7 @@ export default defineBackground(() => {
     // childrenを100個ずつに分割して追加
     const MAX_CHILDREN_PER_REQUEST = 100;
     const childrenChunks: any[][] = [];
-    
+
     for (let i = 0; i < allChildren.length; i += MAX_CHILDREN_PER_REQUEST) {
       childrenChunks.push(allChildren.slice(i, i + MAX_CHILDREN_PER_REQUEST));
     }
@@ -348,5 +366,44 @@ export default defineBackground(() => {
     }
 
     return blocks;
+  }
+
+  /**
+   * マークダウンファイルをダウンロードする
+   * @param name - ファイル名（拡張子なし）
+   * @param content - マークダウンの内容
+   * @param saveAs - 保存先を選択するダイアログを表示するかどうか
+   * @returns ダウンロード結果
+   */
+  async function downloadMarkdown(
+    name: string,
+    content: string,
+    saveAs: boolean = false
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // データ URLを作成（サービスワーカーではBlobとURL.createObjectURLが使えないため）
+      const encoder = new TextEncoder();
+      const data = encoder.encode(content);
+      const base64Data = btoa(
+        String.fromCharCode.apply(null, [...new Uint8Array(data)])
+      );
+      const dataUrl = `data:text/markdown;base64,${base64Data}`;
+
+      // ファイル名を設定（デフォルトはvault/meetingsフォルダに保存）
+      const filename = `vault/meetings/${name}.md`;
+
+      // Chrome downloadsAPIを使用してダウンロード
+      const downloadId = await chrome.downloads.download({
+        url: dataUrl,
+        filename: filename,
+        saveAs: saveAs, // trueにすると毎回「名前を付けて保存」ダイアログが表示される
+        conflictAction: "uniquify", // 同名ファイルがある場合は自動的にリネーム
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      console.error("ダウンロードエラー:", error);
+      return { success: false, error: error.message };
+    }
   }
 });
