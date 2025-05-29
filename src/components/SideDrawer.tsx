@@ -154,7 +154,7 @@ const SideDrawer: React.FC<Props> = ({
         top: 0,
         right: 0,
         height: "100%",
-        width: "350px",
+        width: "368px",
         backgroundColor: "white",
         boxShadow: "-2px 0 10px rgba(0, 0, 0, 0.1)",
         transform: isOpen ? "translateX(0)" : "translateX(100%)",
@@ -427,7 +427,7 @@ const SideDrawer: React.FC<Props> = ({
             style={{
               display: "flex",
               justifyContent: "space-between",
-              gap: "0.5rem",
+              gap: "1rem",
             }}
           >
             <div
@@ -435,6 +435,7 @@ const SideDrawer: React.FC<Props> = ({
                 display: "flex",
                 flexDirection: "column",
                 gap: "0.5rem",
+                flex: 1,
               }}
             >
               <button
@@ -445,6 +446,9 @@ const SideDrawer: React.FC<Props> = ({
                   borderRadius: "0.25rem",
                   border: "none",
                   cursor: "pointer",
+                  width: "100%",
+                  textAlign: "center",
+                  fontSize: "12px",
                 }}
                 onClick={() => {
                   exportCaptionsToMarkdown(captions, false);
@@ -460,18 +464,20 @@ const SideDrawer: React.FC<Props> = ({
                   borderRadius: "0.25rem",
                   border: "none",
                   cursor: "pointer",
-                  fontSize: "0.875rem",
+                  width: "100%",
+                  textAlign: "center",
+                  fontSize: "12px",
                 }}
                 onClick={() => {
                   exportCaptionsToMarkdown(captions, true);
                 }}
                 title="保存先を選択してダウンロードします"
               >
-                保存先を選択
+                保存先を選択してダウンロード
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column" }}>
+            <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
               <button
                 style={{
                   padding: "0.5rem 1rem",
@@ -481,6 +487,9 @@ const SideDrawer: React.FC<Props> = ({
                   border: "none",
                   cursor: notionSettings ? "pointer" : "not-allowed",
                   opacity: notionSettings ? 1 : 0.7,
+                  width: "100%",
+                  textAlign: "center",
+                  fontSize: "12px",
                 }}
                 disabled={!notionSettings}
                 title={

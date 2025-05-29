@@ -41,8 +41,8 @@ export const downloadMarkdown = async (
     );
     const dataUrl = `data:text/markdown;base64,${base64Data}`;
 
-    // ファイル名を設定（デフォルトはvault/meetingsフォルダに保存）
-    const filename = `vault/${name}.md`;
+    // ファイル名を設定（デフォルトはDownloadsフォルダに保存）
+    const filename = `${name}.md`;
 
     // Chrome downloadsAPIを使用してダウンロード
     const downloadId = await chrome.downloads.download({
