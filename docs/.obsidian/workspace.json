@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "project.md",
+                "file": "structure.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "project"
+              "title": "structure"
             }
           }
         ]
@@ -167,9 +167,9 @@
   },
   "active": "8339e243942604c0",
   "lastOpenFiles": [
-    "Pasted image 20250527020633.png",
-    "structure.md",
     "task.md",
-    "project.md"
+    "project.md",
+    "Pasted image 20250527020633.png",
+    "structure.md"
   ]
 }
