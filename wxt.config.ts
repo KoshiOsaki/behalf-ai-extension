@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: {
     name: "Behalf AI extension",
     description: "Behalf AI extension",
-    version: "0.1.2",
+    version: "0.1.3",
     options_ui: {
       page: "options/index.html",
       open_in_tab: true,
