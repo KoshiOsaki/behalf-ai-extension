@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: {
     name: "Behalf AI extension",
     description: "Behalf AI extension",
-    version: "0.1.0",
+    version: "0.1.2",
     options_ui: {
       page: "options/index.html",
       open_in_tab: true,
@@ -19,7 +19,7 @@ export default defineConfig({
     permissions: ["storage", "downloads"],
     host_permissions: [
       "https://generativelanguage.googleapis.com/*",
-      "https://api.notion.com/*"
+      "https://api.notion.com/*",
     ],
   },
 });
