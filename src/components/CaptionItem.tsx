@@ -70,6 +70,8 @@ const CaptionItem: React.FC<CaptionItemProps> = ({
           color: "#4b5563",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
+          userSelect: "text", // テキスト選択を明示的に許可
+          cursor: "text", // テキスト選択時のカーソルを表示
         }}
       >
         {text}
