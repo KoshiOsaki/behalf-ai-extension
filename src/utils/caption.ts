@@ -110,7 +110,7 @@ export const exportCaptionsToMarkdown = (
 
     const meetingTitle = getMeetingTitle() || "会議";
     const today = getCurrentDate();
-    const fileName = `${meetingTitle}_${today}`;
+    const fileName = `${today}_${meetingTitle}`;
 
     // 時間ごとにグループ化する（10分間隔）
     const timeGroups: { [key: string]: CaptionExportData[] } = {};
@@ -159,7 +159,7 @@ export const exportCaptionsToMarkdown = (
         },
       },
       (response) => {
-        if (response.error) {
+        if (response && response.error) {
           console.error(
             "Meet Caption Assistant: マークダウンのダウンロード中にエラーが発生しました",
             response.error
