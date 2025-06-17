@@ -1,5 +1,11 @@
 import { CaptionData } from "../types";
 
+export const sanitizeFilename = (filename: string): string => {
+  // Windows、macOS、Linuxで使用できない文字を除去
+  // \ / : * ? " < > | および制御文字
+  return filename.replace(/[\\/:*?"<>|\x00-\x1F]/g, "_");
+};
+
 export const groupBy10min = (
   captions: CaptionData[]
 ): Record<string, CaptionData[]> => {
@@ -42,7 +48,9 @@ export const downloadMarkdown = async (
     const dataUrl = `data:text/markdown;base64,${base64Data}`;
 
     // ファイル名を設定（デフォルトはDownloadsフォルダに保存）
-    const filename = `${name}.md`;
+    // 無効な文字を除去してからファイル名を設定
+    const sanitizedName = sanitizeFilename(name);
+    const filename = `${sanitizedName}.md`;
 
     // Chrome downloadsAPIを使用してダウンロード
     const downloadId = await chrome.downloads.download({
