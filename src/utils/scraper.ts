@@ -32,20 +32,84 @@ export const getMeetingTitle = () => {
   return titleElem ? titleElem.getAttribute("data-meeting-title") : null;
 };
 
-export const findCaptionContainer = () => {
-  // パターン1: role="region" と aria-label="字幕" を持つ要素
-  const captionByRole = document.querySelector(
-    'div[role="region"][aria-label="字幕"]'
+export const findCaptionContainer = (): Element | null => {
+  // role="region" のうち、aria-label に字幕系キーワードを含むものを探す。
+  // 「字幕」/「Captions」の完全一致をやめ、言語UIの違いに依存しないようにする。
+  const regions = Array.from(
+    document.querySelectorAll('div[role="region"][aria-label]')
   );
-  if (captionByRole) return captionByRole;
 
-  // パターン2: 英語環境の場合 - role="region" と aria-label="Captions" を持つ要素
-  const captionByRoleEn = document.querySelector(
-    'div[role="region"][aria-label="Captions"]'
-  );
-  if (captionByRoleEn) return captionByRoleEn;
+  const captionRegion = regions.find((el) => {
+    const label = el.getAttribute("aria-label")?.toLowerCase() ?? "";
+    return (
+      label.includes("字幕") ||
+      label.includes("caption") ||
+      label.includes("subtitle") ||
+      label.includes("sous-titre") || // fr
+      label.includes("untertitel") // de
+    );
+  });
 
-  return null;
+  return captionRegion ?? null;
+};
+
+// 字幕行（DOM要素）ごとに安定したIDを振るためのマップ。
+// Meet は発言中は同じ要素のテキストを更新し、確定すると新しい行を追加するため、
+// 「DOM要素の同一性」を行の同一性とみなせる。timestamp(img依存)に頼らず重複排除できる。
+const rowIdMap = new WeakMap<Element, number>();
+let rowIdCounter = 0;
+const getRowId = (entry: Element): number => {
+  let id = rowIdMap.get(entry);
+  if (id === undefined) {
+    id = rowIdCounter++;
+    rowIdMap.set(entry, id);
+  }
+  return id;
+};
+
+// 字幕の各行（エントリー）かどうかを「構造」から判定する。
+// class名・id には一切依存しない（Meet の難読化classは変動するため）。
+const isCaptionEntry = (entry: Element): boolean => {
+  // 「最新の字幕に移動」などの操作ボタンを含む行はUIノイズなので除外
+  if (entry.querySelector("button")) return false;
+
+  // テキストを持つ行だけを字幕行とみなす。
+  // （非表示のプレースホルダ div 等はテキストが空なので自然に除外される）
+  return (entry.textContent?.trim().length ?? 0) > 0;
+};
+
+// 1つの字幕行から speaker / text / timestamp を抽出する。
+// 「発言者ブロック（アバター or 名前を持つ子）」と「それ以外（＝文字起こし）」を
+// 並びから動的に切り分けるので、子要素の位置や数が変わっても壊れない。
+const parseCaptionEntry = (entry: Element): CaptionData => {
+  const directChildren = Array.from(entry.children);
+
+  // 発言者ブロック = アバターを内包する直下の子。
+  // アバターはプロフィール画像(img)のときと、画像未設定/複数人だとアイコン(i)のときがある。
+  // どちらも無い瞬間に備え、最終フォールバックとして先頭の子を発言者ブロックとみなす。
+  const speakerBlock =
+    directChildren.find((child) => child.querySelector("img, i")) ??
+    directChildren[0] ??
+    null;
+
+  // timestamp はアバター img の data-iml から取得（アイコン表示など取れなければ 0）
+  const img = speakerBlock?.querySelector<HTMLImageElement>("img[data-iml]");
+  const timestamp = img?.dataset.iml ? parseFloat(img.dataset.iml) : 0;
+
+  // 発言者名 = 発言者ブロック内の最初の span
+  const speaker =
+    speakerBlock?.querySelector("span")?.textContent?.trim() ?? "";
+
+  // 文字起こし = 発言者ブロック以外の直下の子のテキストを連結。
+  // 「2番目の子」決め打ちをやめ、テキスト要素が複数/位置違いでも拾う。
+  const text = directChildren
+    .filter((child) => child !== speakerBlock)
+    .map((child) => child.textContent?.trim() ?? "")
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  return { id: getRowId(entry), speaker, text, timestamp };
 };
 
 // 字幕データの中身を取得する
@@ -57,35 +121,10 @@ export const getCaptionDataList = (): CaptionData[] => {
     return [];
   }
 
-  // ここでは、直下の子要素で、内部に img[data-iml] を含むものを字幕のエントリーとみなす
-  const entries = Array.from(
-    captionRegion.querySelectorAll(":scope > div")
-  ).filter((entry) => entry.querySelector("img[data-iml]"));
-
-  // 各エントリーから CaptionData を抽出
-  const captionDataArray = entries.map((entry) => {
-    // 画像要素の data-iml 属性から timestamp を取得
-    const img = entry.querySelector("img[data-iml]");
-    const timestampStr = img ? img.getAttribute("data-iml") : "";
-    const timestamp = timestampStr ? parseFloat(timestampStr) : 0;
-
-    // 発言者は、画像要素の親要素内にある最初の span 要素とする
-    const speakerElem =
-      img && img.parentElement ? img.parentElement.querySelector("span") : null;
-    const speaker = speakerElem ? speakerElem.textContent?.trim() : "";
-
-    // 字幕の文章は、ここではエントリー内の直下の子要素の２番目（発言者部以外の部分）を利用
-    let text = "";
-    const children = Array.from(entry.children);
-    if (children.length >= 2) {
-      text = children[1].textContent?.trim() || "";
-    } else {
-      // 万が一直下の子要素が1つの場合は、全体のテキストから発言者部分を除去するなどの処理を追加するなどの工夫が必要
-      text = entry.textContent?.trim() || "";
-    }
-
-    return { speaker: speaker || "", text, timestamp };
-  });
-
-  return captionDataArray;
+  // 直下の div を走査し、構造から字幕行だけを選ぶ。
+  // 行の同一性は id(DOM要素ベース)で担保するので、timestamp の有無で足切りしない。
+  return Array.from(captionRegion.querySelectorAll(":scope > div"))
+    .filter(isCaptionEntry)
+    .map(parseCaptionEntry)
+    .filter((caption) => caption.text.length > 0);
 };

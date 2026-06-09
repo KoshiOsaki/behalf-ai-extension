@@ -2,6 +2,8 @@
  * キャプションデータの型定義
  */
 export interface CaptionData {
+  /** 字幕行（DOM要素）ごとの安定ID。重複排除のキーに使う */
+  id: number;
   speaker: string;
   text: string;
   timestamp: number;
@@ -23,15 +25,6 @@ export interface CaptionItemProps {
 export interface CaptionsListProps {
   captions: CaptionData[];
   highlightedCaptionId?: number;
-}
-
-/**
- * 字幕データの型定義
- */
-export interface CaptionData {
-  speaker: string;
-  text: string;
-  timestamp: number;
 }
 
 /**

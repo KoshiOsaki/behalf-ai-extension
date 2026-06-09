@@ -33,11 +33,11 @@ const CaptionAssistantUI: React.FC = () => {
         const updatedCaptions = [...prevCaptions];
 
         newCaptions.forEach((newCaption) => {
-          // 同じタイムスタンプと話者を持つ字幕を検索
+          // 同じ行(DOM要素ベースの id)を持つ字幕を検索。
+          // timestamp はアバターがアイコン表示のとき取れず 0 になり衝突するため、
+          // 行の同一性は id で判定する。
           const existingIndex = updatedCaptions.findIndex(
-            (caption) =>
-              caption.timestamp === newCaption.timestamp &&
-              caption.speaker === newCaption.speaker
+            (caption) => caption.id === newCaption.id
           );
 
           if (existingIndex !== -1) {
