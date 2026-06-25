@@ -61,16 +61,12 @@ export const observeCaptionChanges = (
   // 前回の字幕データを保存する変数
   let previousCaptions: CaptionData[] = [];
 
-  // 字幕の変更を監視するオブザーバー
-  const observer = new MutationObserver((mutations) => {
+  const syncCaptions = () => {
     try {
-      // 現在の字幕データを取得
       const currentCaptions = getCaptionDataList();
-
-      // 前回と異なる場合のみコールバックを実行
       if (
-        JSON.stringify(currentCaptions) !== JSON.stringify(previousCaptions) &&
-        currentCaptions.length > 0
+        currentCaptions.length > 0 &&
+        JSON.stringify(currentCaptions) !== JSON.stringify(previousCaptions)
       ) {
         previousCaptions = currentCaptions;
         callback(currentCaptions);
@@ -81,7 +77,10 @@ export const observeCaptionChanges = (
         error
       );
     }
-  });
+  };
+
+  // 字幕の変更を監視するオブザーバー
+  const observer = new MutationObserver(syncCaptions);
 
   // 字幕コンテナの変更を監視
   observer.observe(captionContainer, {
@@ -89,6 +88,10 @@ export const observeCaptionChanges = (
     subtree: true,
     characterData: true,
   });
+
+  // observe 開始時点で既に行が存在するケース（Meet 側で先に字幕が出ていた等）に備え、
+  // 初回は MutationObserver を待たずに同期する。
+  syncCaptions();
 
   return observer;
 };
