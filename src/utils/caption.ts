@@ -16,49 +16,19 @@ export const getCurrentDate = (): string => {
   return new Date().toISOString().split("T")[0].replace(/-/g, "");
 };
 
-// 字幕が表示されるのを監視する関数
-export const observePageForCaptionContainer = (callback: () => void): void => {
-  // 既に字幕コンテナが存在するか確認
-  const existingContainer = findCaptionContainer();
-  if (existingContainer) {
-    callback();
-    return;
-  }
-
-  // 字幕コンテナが表示されるのを監視
-  const observer = new MutationObserver((mutations) => {
-    const captionContainer = findCaptionContainer();
-    if (captionContainer) {
-      observer.disconnect();
-      callback();
-    }
-  });
-
-  // ドキュメント全体の変更を監視
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-  });
-
-  // 一定時間後にタイムアウト
-  setTimeout(() => {
-    if (!findCaptionContainer()) {
-      observer.disconnect();
-    }
-  }, 30000); // 30秒後にタイムアウト
-};
-
-// 字幕の変更を監視して、変更があればコールバックを実行
-export const observeCaptionChanges = (
+// 字幕領域のライフサイクルを監視する。
+// Meet は字幕のトグルやレイアウト変更で region ノードを丸ごと作り直すことがあり、
+// 一度だけ region に貼った MutationObserver は静かに死んで「取れないとき」が生まれる。
+// ここでは region 本体（内容変化）と region の親（region 差し替え）の 2 層で観測し、
+// 差し替わったら自動的に貼り直す。region がまだ無い間だけ body subtree を張る。
+export const observeCaptionLifecycle = (
   callback: (captions: CaptionData[]) => void
-): MutationObserver => {
-  const captionContainer = findCaptionContainer();
-  if (!captionContainer) {
-    console.error("Meet Caption Assistant: 字幕コンテナが見つかりません");
-    return new MutationObserver(() => {});
-  }
-
-  // 前回の字幕データを保存する変数
+): (() => void) => {
+  let contentObserver: MutationObserver | null = null;
+  let parentObserver: MutationObserver | null = null;
+  let bodyObserver: MutationObserver | null = null;
+  let healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+  let currentRegion: Element | null = null;
   let previousCaptions: CaptionData[] = [];
 
   const syncCaptions = () => {
@@ -79,21 +49,107 @@ export const observeCaptionChanges = (
     }
   };
 
-  // 字幕の変更を監視するオブザーバー
-  const observer = new MutationObserver(syncCaptions);
+  const detachContentObservers = () => {
+    contentObserver?.disconnect();
+    contentObserver = null;
+    parentObserver?.disconnect();
+    parentObserver = null;
+  };
 
-  // 字幕コンテナの変更を監視
-  observer.observe(captionContainer, {
-    childList: true,
-    subtree: true,
-    characterData: true,
-  });
+  const handleRegionLost = () => {
+    detachContentObservers();
+    currentRegion = null;
+    waitForRegion();
+  };
 
-  // observe 開始時点で既に行が存在するケース（Meet 側で先に字幕が出ていた等）に備え、
-  // 初回は MutationObserver を待たずに同期する。
-  syncCaptions();
+  // MutationObserver が取りこぼす祖先差し替え・silent detach への保険。
+  // 低頻度ポーリングで region の生死と最新性を再チェックする。
+  const startHealthCheck = () => {
+    if (healthCheckTimer) return;
+    healthCheckTimer = setInterval(() => {
+      if (!currentRegion) return;
+      if (!currentRegion.isConnected) {
+        handleRegionLost();
+        return;
+      }
+      const latest = findCaptionContainer();
+      if (latest && latest !== currentRegion) {
+        detachContentObservers();
+        bindToRegion(latest);
+        return;
+      }
+      // observer が発火し損ねているケースの救済
+      syncCaptions();
+    }, 2000);
+  };
 
-  return observer;
+  const stopHealthCheck = () => {
+    if (healthCheckTimer) {
+      clearInterval(healthCheckTimer);
+      healthCheckTimer = null;
+    }
+  };
+
+  const bindToRegion = (region: Element) => {
+    currentRegion = region;
+
+    contentObserver = new MutationObserver(syncCaptions);
+    contentObserver.observe(region, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    // region の親 childList のみ監視。Meet が region を差し替えた／取り外した
+    // タイミングだけ発火するので、subtree を張るより桁違いに軽い。
+    const parent = region.parentElement;
+    if (parent) {
+      parentObserver = new MutationObserver(() => {
+        if (!region.isConnected) {
+          handleRegionLost();
+          return;
+        }
+        // 同じ親配下で新しい region に差し替わったケース
+        const latest = findCaptionContainer();
+        if (latest && latest !== currentRegion) {
+          detachContentObservers();
+          bindToRegion(latest);
+        }
+      });
+      parentObserver.observe(parent, { childList: true });
+    }
+
+    syncCaptions();
+    startHealthCheck();
+  };
+
+  const waitForRegion = () => {
+    const existing = findCaptionContainer();
+    if (existing) {
+      bindToRegion(existing);
+      return;
+    }
+    bodyObserver?.disconnect();
+    bodyObserver = new MutationObserver(() => {
+      const region = findCaptionContainer();
+      if (region) {
+        bodyObserver?.disconnect();
+        bodyObserver = null;
+        bindToRegion(region);
+      }
+    });
+    bodyObserver.observe(document.body, { childList: true, subtree: true });
+  };
+
+  waitForRegion();
+
+  return () => {
+    detachContentObservers();
+    bodyObserver?.disconnect();
+    bodyObserver = null;
+    stopHealthCheck();
+    currentRegion = null;
+  };
 };
 
 /**

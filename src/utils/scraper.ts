@@ -2,34 +2,104 @@
 
 import { CaptionData } from "../types";
 
+// 字幕系キーワード（aria-label の locale 差を吸収する）。
+// findCaptionContainer と同じ語彙を使い、判定ロジックを揃える。
+const CAPTION_LABEL_KEYWORDS = [
+  "字幕",
+  "caption",
+  "subtitle",
+  "sous-titre", // fr
+  "untertitel", // de
+  "subtítulo", // es
+  "legenda", // pt
+];
+
+// 「オフにする」系（＝現在オン）を示すキーワード
+const CAPTION_OFF_ACTION_KEYWORDS = [
+  "オフ",
+  "off",
+  "désactiver", // fr
+  "deaktivieren", // de
+  "desactivar", // es
+  "desativar", // pt
+];
+
+const labelIncludesAny = (label: string, keywords: string[]): boolean =>
+  keywords.some((kw) => label.includes(kw));
+
 // 字幕がオンになっているかどうかを判定する
 export const isCheckCaptionActive = (): boolean => {
-  // 字幕ボタンを検索
   const captionButton = findCaptionButton();
-
-  // ボタンが見つからない場合はfalseを返す
   if (!captionButton) {
     console.log("Meet Caption Assistant: 字幕ボタンが見つかりません");
     return false;
   }
 
-  // aria-pressed属性が"true"の場合は字幕がオン
-  // aria-label属性が"字幕をオフにする"の場合も字幕がオン
-  const isActive =
-    captionButton.getAttribute("aria-pressed") === "true" ||
-    captionButton.getAttribute("aria-label") === "字幕をオフにする";
+  // 1) aria-pressed が "true" ならオン
+  if (captionButton.getAttribute("aria-pressed") === "true") return true;
 
-  return isActive;
+  // 2) aria-label が「字幕をオフにする」系（＝押すとオフになる＝今オン）
+  const label = captionButton.getAttribute("aria-label")?.toLowerCase() ?? "";
+  return labelIncludesAny(label, CAPTION_OFF_ACTION_KEYWORDS);
 };
 
-export const findCaptionButton = () => {
-  // data-tooltip-id が ucc-8 のボタンを取得する
-  return document.querySelector('button[data-tooltip-id="ucc-8"]');
+// 字幕オン/オフ用のボタンを検出する。
+// 動的な data-tooltip-id や難読化 class には依存せず、
+// aria-label の多言語キーワード（部分一致）で拾う。最後に Material icon でフォールバック。
+export const findCaptionButton = (): HTMLButtonElement | null => {
+  const buttons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>("button[aria-label]")
+  );
+
+  const matchByLabel = buttons.find((btn) => {
+    const label = btn.getAttribute("aria-label")?.toLowerCase() ?? "";
+    return labelIncludesAny(label, CAPTION_LABEL_KEYWORDS);
+  });
+  if (matchByLabel) return matchByLabel;
+
+  // フォールバック: closed_caption / closed_caption_off アイコンを内包する button
+  const iconHost = document.querySelector<HTMLElement>(
+    'button i.google-symbols, button .google-symbols'
+  );
+  const iconText = iconHost?.textContent?.trim().toLowerCase() ?? "";
+  if (iconText.includes("closed_caption")) {
+    return iconHost?.closest("button") ?? null;
+  }
+  return null;
 };
 
-export const getMeetingTitle = () => {
-  const titleElem = document.querySelector("[data-meeting-title]");
-  return titleElem ? titleElem.getAttribute("data-meeting-title") : null;
+// Meet のDOMは難読化・改変されがちなので複数ソースからフォールバックで拾う。
+// 全部空振りしたら warn を出して壊れたことに気付けるようにする。
+const normalizeTitle = (raw: string | null | undefined): string | null => {
+  if (!raw) return null;
+  const text = raw.replace(/\s+/g, " ").trim();
+  if (!text) return null;
+  // "Meet"/"Google Meet" 単体はプレースホルダなので捨てる
+  if (/^(google\s+)?meet$/i.test(text)) return null;
+  return text;
+};
+
+export const getMeetingTitle = (): string | null => {
+  // 1) 現行DOM: role="heading" aria-level="1" にミーティング名が入っている
+  const heading = document.querySelector<HTMLElement>(
+    '[role="heading"][aria-level="1"]'
+  );
+  const fromHeading = normalizeTitle(heading?.textContent);
+  if (fromHeading) return fromHeading;
+
+  // 2) タブタイトル: Meet は "会議名 - Google Meet" / "Meet - 会議名" 形式で入れる
+  const fromTitle = normalizeTitle(
+    document.title.replace(/\s*[-–—]\s*Google Meet\s*$/i, "")
+                  .replace(/^\s*Meet\s*[-–—]\s*/i, "")
+  );
+  if (fromTitle) return fromTitle;
+
+  // 3) URL 末尾の meeting code (abc-defg-hij) を最終フォールバック
+  const codeMatch = location.pathname.match(/([a-z]{3,4}-[a-z]{3,4}-[a-z]{3,4})/i);
+  if (codeMatch) return codeMatch[1];
+
+  console.warn("Meet Caption Assistant: ミーティング名を取得できませんでした");
+  return null;
 };
 
 export const findCaptionContainer = (): Element | null => {

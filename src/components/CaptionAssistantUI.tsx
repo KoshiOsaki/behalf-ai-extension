@@ -4,10 +4,7 @@ import SideDrawer from "./SideDrawer";
 import CaptionsList from "./CaptionsList";
 import { CaptionData } from "../types";
 import { CaptionEnableReminderToast } from "./CaptionEnableReminderToast";
-import {
-  observeCaptionChanges,
-  observePageForCaptionContainer,
-} from "../utils/caption";
+import { observeCaptionLifecycle } from "../utils/caption";
 import { getMeetingTitle, isCheckCaptionActive } from "../utils/scraper";
 
 /**
@@ -53,11 +50,11 @@ const CaptionAssistantUI: React.FC = () => {
       });
     };
 
-    // 字幕コンテナを監視
-    // TODO: オブサーブの仕組み
-    observePageForCaptionContainer(() => {
-      observeCaptionChanges(handleCaptions);
-    });
+    // 字幕コンテナを監視。region が作り直された場合は自動で貼り直す。
+    const disposeCaptionObserver = observeCaptionLifecycle(handleCaptions);
+    return () => {
+      disposeCaptionObserver();
+    };
   }, []);
 
   return (
