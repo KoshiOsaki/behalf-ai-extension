@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">Gijiro logo v1 (dark)</title>
+  <desc id="description">Meeting-note pages rotate through one full turn and form an eight-petal geometric flower.</desc>
+
+  <style>
+    :root {
+      --background: #191A1E;
+      --paper: #9d8cf5;
+      --accent: #65d69a;
+      --separator: 10px;
+    }
+
+    .page {
+      fill: var(--paper);
+      stroke: var(--background);
+      stroke-width: var(--separator);
+      stroke-linejoin: round;
+    }
+
+    .transcript-line {
+      fill: none;
+      stroke: var(--background);
+      stroke-width: 14px;
+      stroke-linecap: round;
+    }
+  </style>
+
+  <defs>
+    <!-- Every layer is the same sheet, rotated around the exact center. -->
+    <path id="page-shape" d="M180 96H300L352 148V396Q352 416 332 416H180Q160 416 160 396V116Q160 96 180 96Z"/>
+  </defs>
+
+  <rect id="background" width="512" height="512" fill="var(--background)"/>
+
+  <!-- Eight sheets complete one 360-degree turn and create the flower. -->
+  <g id="rotating-page-stack">
+    <use href="#page-shape" class="page" transform="rotate(-157.5 256 256)" opacity="0.42"/>
+    <use href="#page-shape" class="page" transform="rotate(-112.5 256 256)" opacity="0.50"/>
+    <use href="#page-shape" class="page" transform="rotate(-67.5 256 256)" opacity="0.58"/>
+    <use href="#page-shape" class="page" transform="rotate(-22.5 256 256)" opacity="0.66"/>
+    <use href="#page-shape" class="page" transform="rotate(22.5 256 256)" opacity="0.74"/>
+    <use href="#page-shape" class="page" transform="rotate(67.5 256 256)" opacity="0.82"/>
+    <use href="#page-shape" class="page" transform="rotate(112.5 256 256)" opacity="0.90"/>
+    <use href="#page-shape" class="page" transform="rotate(157.5 256 256)" opacity="0.96"/>
+  </g>
+
+  <!-- The current note is smaller so the full page-flower remains visible. -->
+  <g id="active-note" transform="translate(256 256) scale(0.82) translate(-256 -256)">
+    <use id="active-page" href="#page-shape" class="page"/>
+
+    <path id="fold-line" d="M300 100V148H348" fill="none" stroke="var(--background)" stroke-width="10" stroke-linejoin="round"/>
+    <path id="live-fold" d="M306 106V142H342Z" fill="var(--accent)"/>
+
+    <g id="transcript-lines">
+      <path class="transcript-line" d="M202 220H310"/>
+      <path class="transcript-line" d="M202 260H294"/>
+      <path class="transcript-line" d="M202 300H278"/>
+    </g>
+  </g>
+</svg>

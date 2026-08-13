@@ -1,16 +1,35 @@
-# Gijiro logo concepts
+# Gijiro logo
 
-- `gijiro-01-conversation.png`: 会話と議事録を組み合わせた案
-- `gijiro-02-stack.png`: 発言が時系列に積み重なる様子を表した案
-- `gijiro-03-local.png`: PC内の領域、サイドパネル、音声を組み合わせた案
-- `gijiro-04-letter-g.png`: `g` とライブ状態のドットだけで構成した案
-- `gijiro-05-orbit-g.png`: 円形の連続線と `g` の余白を組み合わせた幾何学案
-- `gijiro-06-transcript-weave.png`: 発言の行を編み込んだ格子状の幾何学案
-- `gijiro-07-local-loop.png`: ローカル領域と発言ログを一筆書きにした案
-- `gijiro-08-folded-voice.png`: 三つの発話の流れを六角形に折り込んだ案
+- `gijiro-logo-v1.svg`: 濃いグレー（`#191A1E`）のベタ塗り背景に紙を重ねた案
+- `gijiro-logo-v3.svg`: 採用版。ブラッシュ質感の明るい地に紙を重ね、紙にも同じ質感を乗せた案
+- `texture-brushed.png`: v3の地に使っているブラッシュテクスチャ（SVGにはdata URIで埋め込み済み）
 
-共通カラー:
+どちらも構図は同じで、同じ議事録用紙を8枚回転させ、一周する紙の重なりを花として表している。
 
-- Background: `#17181B`
-- Accent: `#A99CF5`
-- Live: `#6DD8A2`
+## アイコン生成
+
+```
+node scripts/build-icons.mjs [SVGパス]   # 省略時は v3
+```
+
+出力先:
+
+- `public/icon/{16,32,48,96,128}.png`: 拡張機能アイコン（wxtは `public/icon` があればそれを使う）
+- `assets/icon.png`: 512px。`@wxt-dev/auto-icons` の入力元
+- `assets/store/icon-128.png`: Chrome Web Store用。ガイドラインに合わせて128キャンバスの中央に96で配置し、周囲16pxは透過
+
+## カラー
+
+v3（採用版）:
+
+- Ground: `#E4E6E9` + ブラッシュテクスチャ
+- Paper: `#5B4BC9`
+- Live: `#2E9E68`
+
+v1:
+
+- Background: `#191A1E`
+- Paper: `#9D8CF5`
+- Live: `#65D69A`
+
+不採用のコンセプト案（v2, v4〜v6 と初期のPNG案）は `tmp/brand-concepts-archive/` に退避している（git管理外）。
