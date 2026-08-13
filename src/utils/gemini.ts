@@ -20,8 +20,10 @@ export const handleGeminiCall = async (data: {
 
     // Gemini APIを呼び出し
     const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash",
+      model: "gemini-2.5-flash-lite",
       contents: [{ role: "user", parts: [{ text: data.prompt }] }],
+      // 2.5 系は thinking がデフォルトで有効。発言候補は即応性が要るので無効化する
+      config: { thinkingConfig: { thinkingBudget: 0 } },
     });
 
     // レスポンスからテキストを取得
