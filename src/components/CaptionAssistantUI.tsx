@@ -31,8 +31,7 @@ const CaptionAssistantUI: React.FC = () => {
 
         newCaptions.forEach((newCaption) => {
           // 同じ行(DOM要素ベースの id)を持つ字幕を検索。
-          // timestamp はアバターがアイコン表示のとき取れず 0 になり衝突するため、
-          // 行の同一性は id で判定する。
+          // 行の同一性は id で判定する（timestamp は初出時刻なので判定には使わない）。
           const existingIndex = updatedCaptions.findIndex(
             (caption) => caption.id === newCaption.id
           );
@@ -65,7 +64,7 @@ const CaptionAssistantUI: React.FC = () => {
       )}
 
       {/* トグルボタン */}
-      <div className="fixed top-20 right-4 z-50">
+      <div className="fixed top-[136px] right-4 z-50">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="bg-blue-500 hover:bg-blue-600 text-white rounded-full p-3 shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
@@ -78,7 +77,7 @@ const CaptionAssistantUI: React.FC = () => {
             boxShadow:
               "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
             position: "fixed",
-            top: "5rem",
+            top: "8.5rem",
             right: "1rem",
             zIndex: 9999,
           }}

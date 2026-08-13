@@ -137,6 +137,20 @@ const getRowId = (entry: Element): number => {
   return id;
 };
 
+// 字幕行が初めて現れた時刻（epoch ms）。
+// 以前はアバター img の data-iml を使っていたが、あれは「ページ読み込みからの経過ms」
+// なので Date に流すと 1970 年扱いになり 09:00:10 のような無意味な表示になっていた。
+// 行は発言中に何度も再parseされるので、初回の Date.now() を要素ごとに固定して保持する。
+const rowFirstSeenMap = new WeakMap<Element, number>();
+const getRowFirstSeenAt = (entry: Element): number => {
+  let at = rowFirstSeenMap.get(entry);
+  if (at === undefined) {
+    at = Date.now();
+    rowFirstSeenMap.set(entry, at);
+  }
+  return at;
+};
+
 // 字幕の各行（エントリー）かどうかを「構造」から判定する。
 // class名・id には一切依存しない（Meet の難読化classは変動するため）。
 const isCaptionEntry = (entry: Element): boolean => {
@@ -162,10 +176,6 @@ const parseCaptionEntry = (entry: Element): CaptionData => {
     directChildren[0] ??
     null;
 
-  // timestamp はアバター img の data-iml から取得（アイコン表示など取れなければ 0）
-  const img = speakerBlock?.querySelector<HTMLImageElement>("img[data-iml]");
-  const timestamp = img?.dataset.iml ? parseFloat(img.dataset.iml) : 0;
-
   // 発言者名 = 発言者ブロック内の最初の span
   const speaker =
     speakerBlock?.querySelector("span")?.textContent?.trim() ?? "";
@@ -179,7 +189,12 @@ const parseCaptionEntry = (entry: Element): CaptionData => {
     .join(" ")
     .trim();
 
-  return { id: getRowId(entry), speaker, text, timestamp };
+  return {
+    id: getRowId(entry),
+    speaker,
+    text,
+    timestamp: getRowFirstSeenAt(entry),
+  };
 };
 
 // 字幕データの中身を取得する

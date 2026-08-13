@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import { CaptionsListProps, CaptionData } from "../types";
 import CaptionItem from "./CaptionItem";
 
@@ -9,20 +9,6 @@ const CaptionsList: React.FC<CaptionsListProps> = ({
   captions,
   highlightedCaptionId,
 }) => {
-  const listEndRef = useRef<HTMLDivElement>(null);
-
-  // 新しいキャプションが追加されたら自動的に一番下にスクロールする
-  useEffect(() => {
-    if (captions.length > 0) {
-      scrollToBottom();
-    }
-  }, [captions.length]);
-
-  // リストの一番下にスクロールする関数
-  const scrollToBottom = () => {
-    listEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   // キャプションがない場合の表示
   if (captions.length === 0) {
     return (
@@ -61,7 +47,6 @@ const CaptionsList: React.FC<CaptionsListProps> = ({
           isHighlighted={highlightedCaptionId === index}
         />
       ))}
-      <div ref={listEndRef} />
     </div>
   );
 };
