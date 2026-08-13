@@ -236,7 +236,12 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
             <DownloadIcon />
             <span>Markdown</span>
           </button>
-          <button className="bai-export-button" onClick={() => exportCaptionsToMarkdown(captions, true)} title="保存先を選択してダウンロードします">
+          <button
+            className="bai-export-button"
+            onClick={() => exportCaptionsToMarkdown(captions, true)}
+            aria-label="保存先を選択してダウンロード"
+            data-tooltip="保存先を選択してダウンロード"
+          >
             <FolderIcon />
             <span>保存先…</span>
           </button>

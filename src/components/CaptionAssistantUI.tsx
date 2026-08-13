@@ -229,7 +229,7 @@ export const injectUI = () => {
     .bai-live-meta {
       gap: 5px;
       color: var(--bai-text-faint);
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 650;
       letter-spacing: .09em;
     }
@@ -319,7 +319,7 @@ export const injectUI = () => {
     .bai-ai-copy span {
       overflow: hidden;
       color: var(--bai-text-muted);
-      font-size: 10px;
+      font-size: 11px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
@@ -358,7 +358,7 @@ export const injectUI = () => {
     .bai-section-label,
     .bai-footer-heading > span:first-child {
       color: var(--bai-text-faint);
-      font-size: 9px;
+      font-size: 10px;
       font-weight: 650;
       letter-spacing: .12em;
     }
@@ -390,7 +390,7 @@ export const injectUI = () => {
       flex: 0 0 auto;
       padding-top: 2px;
       color: var(--bai-text-faint);
-      font-size: 8px;
+      font-size: 9px;
       font-weight: 700;
       letter-spacing: .08em;
     }
@@ -398,7 +398,7 @@ export const injectUI = () => {
     .bai-suggestion-empty {
       padding: 15px;
       color: var(--bai-text-muted);
-      font-size: 11px;
+      font-size: 12px;
       text-align: center;
       border: 1px dashed var(--bai-border-strong);
       border-radius: 9px;
@@ -472,7 +472,7 @@ export const injectUI = () => {
     .bai-caption-time {
       flex: 0 0 auto;
       color: var(--bai-text-faint);
-      font-size: 9px;
+      font-size: 10px;
       font-variant-numeric: tabular-nums;
       letter-spacing: .02em;
     }
@@ -480,7 +480,7 @@ export const injectUI = () => {
     .bai-caption-text {
       margin: 0;
       color: #c8c9ce;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 400;
       line-height: 1.65;
       white-space: pre-wrap;
@@ -504,7 +504,7 @@ export const injectUI = () => {
     }
 
     .bai-footer-heading > span:last-child {
-      font-size: 9px;
+      font-size: 10px;
     }
 
     .bai-status--success { color: #78d8a8; }
@@ -512,7 +512,7 @@ export const injectUI = () => {
 
     .bai-export-actions {
       display: grid;
-      grid-template-columns: 1.25fr 1fr 1fr;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
       gap: 6px;
     }
 
@@ -524,7 +524,7 @@ export const injectUI = () => {
       justify-content: center;
       gap: 6px;
       padding: 0 8px;
-      overflow: hidden;
+      overflow: visible;
       color: #b7b9c0;
       font-size: 10px !important;
       font-weight: 560 !important;
@@ -534,6 +534,44 @@ export const injectUI = () => {
       border-radius: 8px;
       cursor: pointer;
       transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .bai-export-button > span {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bai-export-button[data-tooltip] {
+      position: relative;
+    }
+
+    .bai-export-button[data-tooltip]::before {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      z-index: 2;
+      padding: 6px 8px;
+      color: var(--bai-text);
+      font-size: 11px;
+      font-weight: 500;
+      line-height: 1.35;
+      white-space: nowrap;
+      content: attr(data-tooltip);
+      background: #303238;
+      border: 1px solid var(--bai-border-strong);
+      border-radius: 6px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
+      opacity: 0;
+      pointer-events: none;
+      transform: translate(-50%, 3px);
+      transition: opacity 120ms ease, transform 120ms ease;
+    }
+
+    .bai-export-button[data-tooltip]:hover::before,
+    .bai-export-button[data-tooltip]:focus-visible::before {
+      opacity: 1;
+      transform: translate(-50%, 0);
     }
 
     .bai-export-button:hover:not(:disabled) {
@@ -570,7 +608,7 @@ export const injectUI = () => {
       margin: 7px auto 0;
       padding: 0;
       color: var(--bai-text-faint);
-      font-size: 9px !important;
+      font-size: 10px !important;
       background: none;
       border: 0;
       cursor: pointer;
@@ -601,7 +639,7 @@ export const injectUI = () => {
       border: 1px solid var(--bai-border);
       border-radius: 50%;
     }
-    .bai-empty-help { margin-top: 5px !important; color: var(--bai-text-faint); font-size: 10px; }
+    .bai-empty-help { margin-top: 5px !important; color: var(--bai-text-faint); font-size: 11px; }
 
     .bai-toggle-wrap {
       position: fixed;
