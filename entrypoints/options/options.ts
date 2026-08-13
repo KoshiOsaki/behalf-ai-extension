@@ -29,13 +29,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       geminiApiKey
     });
     
-    // Notion設定を保存
-    await chrome.storage.local.set({
-      notion: {
-        secret: notionSecret,
-        databaseId: notionDatabaseId
-      }
-    });
+    // Notion設定を保存（両方揃っていない場合は未設定として削除する）
+    if (notionSecret && notionDatabaseId) {
+      await chrome.storage.local.set({
+        notion: {
+          secret: notionSecret,
+          databaseId: notionDatabaseId
+        }
+      });
+    } else {
+      await chrome.storage.local.remove('notion');
+    }
     
     statusElement.textContent = "保存しました ✅";
     setTimeout(() => {
