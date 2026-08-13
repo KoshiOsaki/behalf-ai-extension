@@ -5,9 +5,9 @@ function App() {
     <div className="w-80 h-96 p-4 bg-gray-50">
       <header className="mb-4">
         <h1 className="text-xl font-bold text-gray-800">
-          Meet Caption Assistant
+          Gijiro
         </h1>
-        <p className="text-sm text-gray-600">Google Meetのキャプションを強化</p>
+        <p className="text-sm text-gray-600">会話を、自分のPCに。</p>
       </header>
 
       <div className="space-y-4">

@@ -25,7 +25,7 @@ echo "ZIPファイルを $ZIPFILE にコピーしました"
 # GitHubリリース作成
 echo "GitHubリリースを作成しています..."
 gh release create $VERSION_TAG $ZIPFILE \
-  --title "Behalf AI Extension $VERSION_TAG" \
+  --title "Gijiro $VERSION_TAG" \
   --notes "
 プロジェクトの詳細については[プロジェクト概要](docs/project.md)を参照してください。
 使い方は[使い方](docs/manual.md)を参照してください。

@@ -56,6 +56,38 @@ const CaptionAssistantUI: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    const handleToggleShortcut = (event: KeyboardEvent) => {
+      if (
+        event.repeat ||
+        event.isComposing ||
+        event.key.toLowerCase() !== "o" ||
+        (!event.metaKey && !event.ctrlKey) ||
+        event.altKey ||
+        event.shiftKey
+      ) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) ||
+          target.closest('[contenteditable="true"]'))
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      setIsOpen((current) => !current);
+    };
+
+    document.addEventListener("keydown", handleToggleShortcut, true);
+    return () => document.removeEventListener("keydown", handleToggleShortcut, true);
+  }, []);
+
   return (
     <>
       {/* 字幕有効化リマインダー */}
@@ -68,22 +100,13 @@ const CaptionAssistantUI: React.FC = () => {
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="bai-toggle-button"
-          aria-label={isOpen ? "字幕履歴を閉じる" : "字幕履歴を開く"}
+          aria-label={captions.length > 0 ? "Gijiroを開く・字幕あり" : "Gijiroを開く"}
+          aria-keyshortcuts="Meta+O Control+O"
         >
-          <svg
-            aria-hidden="true"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
-            />
-          </svg>
-          <span>会話ログ</span>
+          <span>Gijiro</span>
+          {captions.length > 0 && (
+            <span className="bai-toggle-notification-dot" aria-hidden="true" />
+          )}
         </button>
       </div>}
 
@@ -649,24 +672,45 @@ export const injectUI = () => {
     }
 
     .bai-toggle-button {
+      position: relative;
       display: flex;
-      height: 38px;
+      min-width: 86px;
+      height: 40px;
       align-items: center;
-      gap: 7px;
-      padding: 0 12px 0 10px;
-      color: #ececef;
-      font-size: 11px !important;
-      font-weight: 580 !important;
-      background: rgba(31, 32, 36, .92);
-      border: 1px solid rgba(255, 255, 255, .13);
+      justify-content: center;
+      padding: 0 16px;
+      color: #fff;
+      font-size: 12px !important;
+      font-weight: 650 !important;
+      letter-spacing: .01em;
+      background: linear-gradient(135deg, #7165dd, #9a69dc);
+      border: 1px solid rgba(255, 255, 255, .2);
       border-radius: 11px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, .28);
+      box-shadow: 0 8px 26px rgba(84, 65, 180, .3);
       backdrop-filter: blur(18px);
       cursor: pointer;
+      transition: filter 140ms ease, transform 140ms ease, box-shadow 140ms ease;
     }
 
-    .bai-toggle-button:hover { background: rgba(39, 40, 45, .96); }
-    .bai-toggle-button svg { width: 16px; height: 16px; }
+    .bai-toggle-button:hover {
+      filter: brightness(1.08);
+      box-shadow: 0 10px 30px rgba(84, 65, 180, .38);
+      transform: translateY(-1px);
+    }
+
+    .bai-toggle-button:active { transform: translateY(0); }
+
+    .bai-toggle-notification-dot {
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 10px;
+      height: 10px;
+      background: #ff4d5e;
+      border: 2px solid #17181b;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px rgba(255, 77, 94, .14);
+    }
 
     @keyframes spin {
       0% { transform: rotate(0deg); }

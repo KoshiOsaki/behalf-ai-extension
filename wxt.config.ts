@@ -5,8 +5,8 @@ export default defineConfig({
   extensionApi: "chrome",
   modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons"],
   manifest: {
-    name: "Behalf AI extension",
-    description: "Behalf AI extension",
+    name: "Gijiro",
+    description: "会話を自分のPCに残せる、Google Meet用のローカル議事録ツール",
     version: "0.1.3",
     options_ui: {
       page: "options/index.html",
