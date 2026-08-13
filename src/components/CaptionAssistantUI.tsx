@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import SideDrawer from "./SideDrawer";
 import CaptionsList from "./CaptionsList";
@@ -11,13 +11,19 @@ import { getMeetingTitle, isCheckCaptionActive } from "../utils/scraper";
  * Gijiroのサイドドロワー UI
  */
 const CaptionAssistantUI: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(true); // 初期状態を開いた状態に変更
+  // 勝手に開かないよう初期状態は閉じておく（トグルボタンか ⌘/Ctrl+O で開く）
+  const [isOpen, setIsOpen] = useState(false);
   const [captions, setCaptions] = useState<CaptionData[]>([]);
   const [highlightedCaptionId, setHighlightedCaptionId] = useState<
     number | undefined
   >(undefined);
 
+  // 初回だけショートカットのヒントを自動表示する
+  const [showShortcutHint, setShowShortcutHint] = useState(false);
+
   const isCaptionsEnabled = isCheckCaptionActive() || captions.length > 0;
+  const isMac = navigator.userAgent.includes("Mac");
+  const shortcutLabel = isMac ? "⌘+O キー" : "Ctrl+O キー";
   // const isMeetingStarted = getMeetingTitle() !== null;
   const isMeetingStarted = true;
 
@@ -88,6 +94,110 @@ const CaptionAssistantUI: React.FC = () => {
     return () => document.removeEventListener("keydown", handleToggleShortcut, true);
   }, []);
 
+  // パネルを初めて閉じたときだけ、ショートカットのヒントを数秒だけ出す
+  useEffect(() => {
+    if (isOpen) return;
+
+    let hideTimer: ReturnType<typeof setTimeout> | null = null;
+
+    chrome.storage.local.get(["shortcutHintShown"]).then((storage) => {
+      if (storage.shortcutHintShown) return;
+      chrome.storage.local.set({ shortcutHintShown: true });
+      setShowShortcutHint(true);
+      hideTimer = setTimeout(() => setShowShortcutHint(false), 5000);
+    });
+
+    return () => {
+      if (hideTimer) clearTimeout(hideTimer);
+    };
+  }, [isOpen]);
+
+  // トグルボタンの位置（ドラッグで移動でき、保存される）
+  const [togglePosition, setTogglePosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
+  const dragStateRef = useRef<{
+    pointerId: number;
+    offsetX: number;
+    offsetY: number;
+    moved: boolean;
+  } | null>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    chrome.storage.local.get(["togglePosition"]).then((storage) => {
+      if (storage.togglePosition) setTogglePosition(storage.togglePosition);
+    });
+  }, []);
+
+  // ウィンドウ内に収める
+  const clampPosition = (top: number, left: number) => {
+    const rect = toggleRef.current?.getBoundingClientRect();
+    const width = rect?.width ?? 100;
+    const height = rect?.height ?? 46;
+    return {
+      top: Math.min(Math.max(top, 8), window.innerHeight - height - 8),
+      left: Math.min(Math.max(left, 8), window.innerWidth - width - 8),
+    };
+  };
+
+  const handleTogglePointerDown = (event: React.PointerEvent<HTMLButtonElement>) => {
+    if (event.button !== 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    dragStateRef.current = {
+      pointerId: event.pointerId,
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleTogglePointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragStateRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const top = event.clientY - drag.offsetY;
+    const left = event.clientX - drag.offsetX;
+    // 数px動いたらドラッグ扱い（クリックと区別する）
+    if (!drag.moved) {
+      const rect = event.currentTarget.getBoundingClientRect();
+      if (Math.abs(top - rect.top) < 4 && Math.abs(left - rect.left) < 4) return;
+      drag.moved = true;
+    }
+    setTogglePosition(clampPosition(top, left));
+  };
+
+  const handleTogglePointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const drag = dragStateRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    dragStateRef.current = null;
+
+    if (drag.moved) {
+      setTogglePosition((current) => {
+        if (current) chrome.storage.local.set({ togglePosition: current });
+        return current;
+      });
+      return;
+    }
+    // 動いていなければ通常のクリックとして開く
+    setIsOpen(true);
+  };
+
+  // ウィンドウリサイズで画面外に出た場合の補正
+  useEffect(() => {
+    if (!togglePosition) return;
+    const handleResize = () => {
+      setTogglePosition((current) =>
+        current ? clampPosition(current.top, current.left) : current
+      );
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, [togglePosition]);
+
   return (
     <>
       {/* 字幕有効化リマインダー */}
@@ -96,12 +206,33 @@ const CaptionAssistantUI: React.FC = () => {
       )}
 
       {/* パネルを閉じている時だけ表示するトグルボタン */}
-      {!isOpen && <div className="bai-toggle-wrap">
+      {!isOpen && <div
+        className="bai-toggle-wrap"
+        style={
+          togglePosition
+            ? { top: togglePosition.top, left: togglePosition.left, right: "auto" }
+            : undefined
+        }
+      >
         <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="bai-toggle-button"
+          ref={toggleRef}
+          onPointerDown={handleTogglePointerDown}
+          onPointerMove={handleTogglePointerMove}
+          onPointerUp={handleTogglePointerUp}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setIsOpen(true);
+            }
+          }}
+          className={`bai-toggle-button${showShortcutHint ? " bai-toggle-button--hint" : ""}${
+            togglePosition && togglePosition.left < 280
+              ? " bai-toggle-button--tooltip-left"
+              : ""
+          }`}
           aria-label={captions.length > 0 ? "Gijiroを開く・字幕あり" : "Gijiroを開く"}
           aria-keyshortcuts="Meta+O Control+O"
+          data-tooltip={`Gijiroを開く (${shortcutLabel}・ドラッグで移動)`}
         >
           <span>Gijiro</span>
           {captions.length > 0 && (
@@ -409,13 +540,77 @@ export const injectUI = () => {
       border-color: rgba(169, 156, 245, .22);
     }
 
-    .bai-copy-label {
-      flex: 0 0 auto;
-      padding-top: 2px;
+    .bai-suggestions-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .bai-suggestions-close {
+      display: flex;
+      width: 20px;
+      height: 20px;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
       color: var(--bai-text-faint);
-      font-size: 9px;
-      font-weight: 700;
-      letter-spacing: .08em;
+      background: transparent;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: color 140ms ease, background 140ms ease;
+    }
+
+    .bai-suggestions-close:hover {
+      color: var(--bai-text);
+      background: rgba(255, 255, 255, .07);
+    }
+
+    .bai-suggestions-close svg {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+    }
+
+    .bai-suggestion-copy {
+      display: flex;
+      flex: 0 0 auto;
+      width: 24px;
+      height: 24px;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      color: var(--bai-text-faint);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: color 140ms ease, background 140ms ease, border-color 140ms ease;
+    }
+
+    .bai-suggestion-card:hover .bai-suggestion-copy {
+      color: var(--bai-text-muted);
+      border-color: var(--bai-border);
+    }
+
+    .bai-suggestion-copy:hover {
+      color: var(--bai-text) !important;
+      background: rgba(255, 255, 255, .08);
+      border-color: var(--bai-border-strong) !important;
+    }
+
+    .bai-suggestion-copy svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
     }
 
     .bai-suggestion-empty {
@@ -681,6 +876,109 @@ export const injectUI = () => {
     }
     .bai-empty-help { margin-top: 5px !important; color: var(--bai-text-faint); font-size: 11px; }
 
+    .bai-toast {
+      position: fixed;
+      bottom: 108px;
+      left: 20px;
+      z-index: 2147483647;
+      display: flex;
+      max-width: 360px;
+      align-items: flex-start;
+      gap: 11px;
+      padding: 13px 14px;
+      color: var(--bai-text);
+      background: var(--bai-surface);
+      border: 1px solid var(--bai-border-strong);
+      border-radius: 12px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .46), 0 3px 10px rgba(0, 0, 0, .3);
+    }
+
+    .bai-toast-icon {
+      display: flex;
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      align-items: center;
+      justify-content: center;
+      color: #f0b45f;
+      background: rgba(240, 180, 95, .13);
+      border-radius: 8px;
+    }
+
+    .bai-toast-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .bai-toast-body {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .bai-toast-body > strong {
+      color: var(--bai-text);
+      font-size: 13px !important;
+      font-weight: 640 !important;
+    }
+
+    .bai-toast-body > span {
+      color: var(--bai-text-muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .bai-kbd {
+      display: inline-flex;
+      min-width: 18px;
+      align-items: center;
+      justify-content: center;
+      padding: 1px 5px;
+      color: var(--bai-text);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 640;
+      background: var(--bai-surface-raised);
+      border: 1px solid var(--bai-border-strong);
+      border-radius: 5px;
+    }
+
+    .bai-toast-close {
+      display: flex;
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      color: var(--bai-text-faint);
+      background: transparent;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: color 140ms ease, background 140ms ease;
+    }
+
+    .bai-toast-close:hover {
+      color: var(--bai-text);
+      background: rgba(255, 255, 255, .07);
+    }
+
+    .bai-toast-close svg {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+    }
+
     .bai-toggle-wrap {
       position: fixed;
       top: 136px;
@@ -709,9 +1007,13 @@ export const injectUI = () => {
         0 4px 12px rgba(0, 0, 0, .34),
         inset 0 1px 0 rgba(255, 255, 255, .22);
       backdrop-filter: blur(18px);
-      cursor: pointer;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
       transition: filter 140ms ease, transform 140ms ease, box-shadow 140ms ease;
     }
+
+    .bai-toggle-button:active { cursor: grabbing; }
 
     .bai-toggle-button:hover {
       filter: brightness(1.08);
@@ -723,6 +1025,49 @@ export const injectUI = () => {
     }
 
     .bai-toggle-button:active { transform: translateY(0); }
+
+    /* Meet と同じく「操作名（ショートカット）」を出す。ボタンが右端なので下・右揃えで表示 */
+    .bai-toggle-button[data-tooltip]::after {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      padding: 6px 9px;
+      color: #e8eaed;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0;
+      line-height: 1.35;
+      text-shadow: none;
+      white-space: nowrap;
+      content: attr(data-tooltip);
+      background: #3c4043;
+      border-radius: 4px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, .38);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-3px);
+      transition: opacity 120ms ease, transform 120ms ease;
+    }
+
+    .bai-toggle-button:hover::after,
+    .bai-toggle-button:focus-visible::after {
+      opacity: 1;
+      /* hover 直後に出ないよう少し待つ */
+      transition-delay: 400ms;
+      transform: translateY(0);
+    }
+
+    /* 画面左寄りに移動したときはツールチップを左揃えにして見切れを防ぐ */
+    .bai-toggle-button--tooltip-left[data-tooltip]::after {
+      right: auto;
+      left: 0;
+    }
+
+    /* 初回ヒント時はホバー無しでも表示する */
+    .bai-toggle-button--hint::after {
+      opacity: 1;
+      transform: translateY(0);
+    }
 
     .bai-toggle-notification-dot {
       position: absolute;

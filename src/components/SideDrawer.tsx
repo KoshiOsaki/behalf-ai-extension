@@ -62,18 +62,34 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
   } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [copiedSuggestionIndex, setCopiedSuggestionIndex] = useState<number | null>(
+    null
+  );
   const [exportStatus, setExportStatus] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
 
   const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestionCopyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+      if (suggestionCopyTimer.current) clearTimeout(suggestionCopyTimer.current);
     };
   }, []);
+
+  // コピーしてもパネルは閉じない。閉じるのは✕ボタンだけ
+  const handleCopySuggestion = (suggestion: string, index: number) => {
+    navigator.clipboard.writeText(suggestion);
+    setCopiedSuggestionIndex(index);
+    if (suggestionCopyTimer.current) clearTimeout(suggestionCopyTimer.current);
+    suggestionCopyTimer.current = setTimeout(
+      () => setCopiedSuggestionIndex(null),
+      2000
+    );
+  };
 
   const handleCopyAll = async () => {
     const success = await copyCaptionsToClipboard(captions);
@@ -94,13 +110,11 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
   };
 
   const handleGenerateSuggestions = async () => {
-    if (showSuggestions) {
-      setShowSuggestions(false);
-      return;
-    }
-
     setShowSuggestions(true);
     setIsLoadingSuggestions(true);
+    // 前回の候補が残ったまま次の生成結果を待たないようにクリアする
+    setSuggestions([]);
+    setCopiedSuggestionIndex(null);
 
     try {
       const generatedSuggestions = await generateSuggestions(captions);
@@ -236,26 +250,43 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
           onClick={apiKeyExists ? handleGenerateSuggestions : openOptionsPage}
           disabled={isLoadingSuggestions}
         >
-          {isLoadingSuggestions ? "生成中" : apiKeyExists ? (showSuggestions ? "閉じる" : "生成") : "設定"}
+          {isLoadingSuggestions ? "生成中" : apiKeyExists ? (showSuggestions ? "再生成" : "生成") : "設定"}
         </button>
       </section>
 
       {showSuggestions && (
         <section className="bai-suggestions" aria-live="polite">
-          <div className="bai-section-label">SUGGESTIONS</div>
+          <div className="bai-suggestions-heading">
+            <span className="bai-section-label">SUGGESTIONS</span>
+            <button
+              className="bai-suggestions-close"
+              onClick={() => setShowSuggestions(false)}
+              aria-label="発言候補を閉じる"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="m7 7 10 10M17 7 7 17" />
+              </svg>
+            </button>
+          </div>
           {suggestions.length > 0 ? (
             suggestions.map((suggestion, index) => (
-              <button
+              <div
                 key={index}
                 className="bai-suggestion-card"
-                onClick={() => {
-                  navigator.clipboard.writeText(suggestion);
-                  setShowSuggestions(false);
-                }}
+                onClick={() => handleCopySuggestion(suggestion, index)}
               >
                 <span>{suggestion}</span>
-                <span className="bai-copy-label">COPY</span>
-              </button>
+                <button
+                  className="bai-suggestion-copy"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleCopySuggestion(suggestion, index);
+                  }}
+                  aria-label="この候補をコピー"
+                >
+                  {copiedSuggestionIndex === index ? <CheckIcon /> : <CopyIcon />}
+                </button>
+              </div>
             ))
           ) : (
             <div className="bai-suggestion-empty">
