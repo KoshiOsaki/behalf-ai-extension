@@ -37,7 +37,7 @@ const CaptionsList: React.FC<CaptionsListProps> = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="bai-caption-list">
       {captions.map((caption: CaptionData, index: number) => (
         <CaptionItem
           key={`${caption.timestamp}-${index}`}

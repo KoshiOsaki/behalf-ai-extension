@@ -10,22 +10,39 @@ type Props = {
   children: React.ReactNode;
 };
 
-/**
- * 折りたたみ可能なサイドドロワーコンポーネント
- * Google Meetのページに表示される字幕履歴を表示するためのドロワー
- */
-const SideDrawer: React.FC<Props> = ({
-  captions,
-  isOpen,
-  onClose,
-  children,
-}) => {
+const SparklesIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M12 3.4c.5 3.3 2.3 5.1 5.6 5.6-3.3.5-5.1 2.3-5.6 5.6-.5-3.3-2.3-5.1-5.6-5.6 3.3-.5 5.1-2.3 5.6-5.6Z" />
+    <path d="M18.2 14.6c.25 1.7 1.2 2.65 2.9 2.9-1.7.25-2.65 1.2-2.9 2.9-.25-1.7-1.2-2.65-2.9-2.9 1.7-.25 2.65-1.2 2.9-2.9ZM5.2 3.1c.2 1.25.9 1.95 2.15 2.15C6.1 5.45 5.4 6.15 5.2 7.4 5 6.15 4.3 5.45 3.05 5.25 4.3 5.05 5 4.35 5.2 3.1Z" />
+  </svg>
+);
+
+const DownloadIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 18.5h14" />
+  </svg>
+);
+
+const FolderIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M3.5 7.5h6l1.8 2H20.5v8.75a1.75 1.75 0 0 1-1.75 1.75H5.25a1.75 1.75 0 0 1-1.75-1.75V7.5Zm0 0V5.75C3.5 4.78 4.28 4 5.25 4h4.1l1.8 2H18" />
+  </svg>
+);
+
+const ExportIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M14 4h6v6m0-6-9 9" />
+    <path d="M18 13v5.25A1.75 1.75 0 0 1 16.25 20H5.75A1.75 1.75 0 0 1 4 18.25V7.75A1.75 1.75 0 0 1 5.75 6H11" />
+  </svg>
+);
+
+/** Google Meetの会話ログを表示するサイドパネル */
+const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [apiKeyExists, setApiKeyExists] = useState<boolean>(false);
-  const [showApiKeyInfo, setShowApiKeyInfo] = useState<boolean>(false);
+  const [apiKeyExists, setApiKeyExists] = useState(false);
   const [notionSettings, setNotionSettings] = useState<{
     secret: string;
     databaseId: string;
@@ -36,557 +53,210 @@ const SideDrawer: React.FC<Props> = ({
     message: string;
   } | null>(null);
 
-  // 発言候補を生成する関数
-  const handleGenerateSuggestions = async () => {
-    if (!showSuggestions) {
-      setShowSuggestions(true);
-      setIsLoadingSuggestions(true);
+  const openOptionsPage = () => {
+    chrome.runtime.sendMessage({ type: "open-options-page" });
+  };
 
-      try {
-        // 発言候補を生成
-        const generatedSuggestions = await generateSuggestions(captions);
-        setSuggestions(generatedSuggestions);
-      } catch (error) {
-        console.error("発言候補の生成中にエラーが発生しました:", error);
-        setSuggestions([]);
-      } finally {
-        setIsLoadingSuggestions(false);
-      }
-    } else {
+  const handleGenerateSuggestions = async () => {
+    if (showSuggestions) {
       setShowSuggestions(false);
+      return;
+    }
+
+    setShowSuggestions(true);
+    setIsLoadingSuggestions(true);
+
+    try {
+      const generatedSuggestions = await generateSuggestions(captions);
+      setSuggestions(generatedSuggestions);
+    } catch (error) {
+      console.error("発言候補の生成中にエラーが発生しました:", error);
+      setSuggestions([]);
+    } finally {
+      setIsLoadingSuggestions(false);
     }
   };
 
-  // APIキー情報表示の切り替え
-  const toggleApiKeyInfo = () => {
-    setShowApiKeyInfo(!showApiKeyInfo);
-  };
-
-  // ドロワーの外側をクリックした時に閉じる処理
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (
-        drawerRef.current &&
-        !drawerRef.current.contains(event.target as Node)
-      ) {
+      if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
         onClose();
       }
     };
 
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    if (isOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen, onClose]);
 
-  // ESCキーを押した時に閉じる処理
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        onClose();
-      }
+      if (event.key === "Escape") onClose();
     };
 
-    if (isOpen) {
-      document.addEventListener("keydown", handleEscKey);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleEscKey);
-    };
+    if (isOpen) document.addEventListener("keydown", handleEscKey);
+    return () => document.removeEventListener("keydown", handleEscKey);
   }, [isOpen, onClose]);
 
-  // APIキーとNotion設定の存在確認
   useEffect(() => {
     const checkSettings = async () => {
-      const storage = await chrome.storage.local.get([
-        "geminiApiKey",
-        "notion",
-      ]);
+      const storage = await chrome.storage.local.get(["geminiApiKey", "notion"]);
       setApiKeyExists(!!storage.geminiApiKey);
       setNotionSettings(storage.notion || null);
     };
 
-    // 初期確認
     checkSettings();
 
-    // ストレージの変更を監視
     const handleStorageChange = (
       changes: { [key: string]: chrome.storage.StorageChange },
       areaName: string
     ) => {
-      if (areaName === "local") {
-        if (changes.geminiApiKey) {
-          // APIキーが変更された場合
-          setApiKeyExists(!!changes.geminiApiKey.newValue);
-          // APIキーが設定された場合、情報表示を閉じる
-          if (changes.geminiApiKey.newValue) {
-            setShowApiKeyInfo(false);
-          }
-        }
-
-        if (changes.notion) {
-          // Notion設定が変更された場合
-          setNotionSettings(changes.notion.newValue || null);
-        }
-      }
+      if (areaName !== "local") return;
+      if (changes.geminiApiKey) setApiKeyExists(!!changes.geminiApiKey.newValue);
+      if (changes.notion) setNotionSettings(changes.notion.newValue || null);
     };
 
-    // イベントリスナーを追加
     chrome.storage.onChanged.addListener(handleStorageChange);
-
-    // クリーンアップ関数
-    return () => {
-      chrome.storage.onChanged.removeListener(handleStorageChange);
-    };
+    return () => chrome.storage.onChanged.removeListener(handleStorageChange);
   }, []);
 
+  const handleNotionExport = () => {
+    if (!notionSettings) return;
+
+    setIsExporting(true);
+    setExportStatus(null);
+    const meetingTitle =
+      document.title || "会議_" + new Date().toISOString().split("T")[0];
+
+    chrome.runtime.sendMessage(
+      {
+        type: "NOTION_EXPORT",
+        payload: { captions, meetingTitle },
+      },
+      (res) => {
+        setIsExporting(false);
+        setExportStatus(
+          res.ok
+            ? { success: true, message: "Notionに保存しました" }
+            : { success: false, message: `失敗: ${res.error}` }
+        );
+        setTimeout(() => setExportStatus(null), 5000);
+      }
+    );
+  };
+
   return (
-    <div
-      className={`fixed top-0 right-0 h-full bg-white shadow-lg transform transition-transform duration-300 ease-in-out z-50 ${
-        isOpen ? "translate-x-0" : "translate-x-full"
-      }`}
-      style={{
-        position: "fixed",
-        top: 0,
-        right: 0,
-        height: "100%",
-        width: "368px",
-        backgroundColor: "white",
-        boxShadow: "-2px 0 10px rgba(0, 0, 0, 0.1)",
-        transform: isOpen ? "translateX(0)" : "translateX(100%)",
-        transition: "transform 0.3s ease-in-out",
-        zIndex: 9999,
-      }}
+    <aside
       ref={drawerRef}
+      className={`bai-drawer ${isOpen ? "bai-drawer--open" : ""}`}
+      aria-hidden={!isOpen}
     >
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          height: "100%",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "1rem",
-            borderBottom: "1px solid #e5e7eb",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "1.125rem",
-              fontWeight: 600,
-              color: "#1f2937",
-            }}
-          >
-            字幕履歴
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              color: "#6b7280",
-              cursor: "pointer",
-              background: "none",
-              border: "none",
-              padding: "0.5rem",
-            }}
-            aria-label="閉じる"
-          >
-            <svg
-              style={{ width: "1.25rem", height: "1.25rem" }}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
-        </div>
-
-        {/* 発言候補を表示ボタン */}
-        <div
-          style={{
-            padding: "0.5rem 1rem",
-            borderBottom: "1px solid #e5e7eb",
-          }}
-        >
+      <header className="bai-header">
+        <div className="bai-heading">
+          <div className="bai-mark" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
           <div>
-            <button
-              onClick={
-                apiKeyExists
-                  ? handleGenerateSuggestions
-                  : () => {
-                      // コンテンツスクリプトからはopenOptionsPageに直接アクセスできないため、
-                      // メッセージパッシングを使用してバックグラウンドスクリプトに要求を送信
-                      chrome.runtime.sendMessage({ type: "open-options-page" });
-                    }
-              }
-              style={{
-                padding: "0.5rem 1rem",
-                marginTop: "0.5rem",
-                backgroundColor: apiKeyExists ? "#f3f4f6" : "#f3f4f6",
-                color: apiKeyExists ? "#4b5563" : "#9ca3af",
-                borderRadius: "0.25rem",
-                border: "none",
-                cursor: apiKeyExists ? "pointer" : "default",
-                transition: "background-color 0.2s",
-                opacity: apiKeyExists ? 1 : 0.7,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "100%",
-              }}
-              onMouseOver={(e) => {
-                if (apiKeyExists) {
-                  e.currentTarget.style.backgroundColor = "#e5e7eb";
-                }
-              }}
-              onMouseOut={(e) => {
-                if (apiKeyExists) {
-                  e.currentTarget.style.backgroundColor = "#f3f4f6";
-                }
-              }}
-              disabled={!apiKeyExists}
-            >
-              <span>発言候補を表示</span>
-              {isLoadingSuggestions && (
-                <span
-                  style={{
-                    marginLeft: "0.5rem",
-                    display: "inline-block",
-                    width: "1rem",
-                    height: "1rem",
-                    borderRadius: "50%",
-                    border: "2px solid #e5e7eb",
-                    borderTopColor: "#3b82f6",
-                    animation: "spin 1s linear infinite",
-                  }}
-                />
-              )}
-              {!apiKeyExists && (
-                <svg
-                  style={{
-                    marginLeft: "0.5rem",
-                    width: "1rem",
-                    height: "1rem",
-                  }}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              )}
-            </button>
-
-            {!apiKeyExists && (
-              <div
-                style={{
-                  marginTop: "0.75rem",
-                  padding: "0.75rem",
-                  backgroundColor: "#f0f9ff",
-                  borderRadius: "0.375rem",
-                  border: "1px solid #bae6fd",
-                  fontSize: "0.75rem",
-                  color: "#0c4a6e",
-                  lineHeight: 1.5,
-                }}
-              >
-                <p style={{ marginBottom: "0.5rem" }}>
-                  発言候補を表示するには、Gemini APIキーの設定が必要です。
-                </p>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      // コンテンツスクリプトからはopenOptionsPageに直接アクセスできないため、
-                      // メッセージパッシングを使用してバックグラウンドスクリプトに要求を送信
-                      chrome.runtime.sendMessage({ type: "open-options-page" });
-                    }}
-                    style={{
-                      padding: "0.25rem 0.75rem",
-                      backgroundColor: "#0284c7",
-                      color: "white",
-                      borderRadius: "0.25rem",
-                      border: "none",
-                      cursor: "pointer",
-                      fontSize: "0.75rem",
-                      fontWeight: 500,
-                    }}
-                  >
-                    設定ページを開く
-                  </button>
-                </div>
-              </div>
-            )}
+            <h2>会話ログ</h2>
+            <div className="bai-live-meta">
+              <span className="bai-live-dot" />
+              <span>LIVE</span>
+              <span className="bai-meta-separator">·</span>
+              <span>{captions.length}件</span>
+            </div>
           </div>
         </div>
+        <button className="bai-icon-button" onClick={onClose} aria-label="閉じる">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m7 7 10 10M17 7 7 17" />
+          </svg>
+        </button>
+      </header>
 
-        {/* 発言候補のポップオーバー */}
-        {showSuggestions && (
-          <div
-            style={{
-              padding: "1rem",
-              backgroundColor: "#ffffff",
-              borderBottom: "1px solid #e5e7eb",
-              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: "0.875rem",
-                fontWeight: 600,
-                marginBottom: "0.5rem",
-                color: "#4b5563",
-              }}
-            >
-              あなたの発言候補
-            </h3>
-            <div>
-              {suggestions.length > 0 ? (
-                suggestions.map((suggestion, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      padding: "0.75rem",
-                      backgroundColor: "#f9fafb",
-                      borderRadius: "0.25rem",
-                      marginBottom: "0.5rem",
-                      cursor: "pointer",
-                      border: "1px solid #e5e7eb",
-                    }}
-                    onClick={() => {
-                      // クリップボードにコピー
-                      navigator.clipboard.writeText(suggestion);
-                      // コピー後にポップオーバーを閉じる
-                      setShowSuggestions(false);
-                    }}
-                  >
-                    {suggestion}
-                  </div>
-                ))
-              ) : (
-                <div
-                  style={{
-                    padding: "0.75rem",
-                    backgroundColor: "#f9fafb",
-                    borderRadius: "0.25rem",
-                    textAlign: "center",
-                    color: "#6b7280",
-                  }}
-                >
-                  {isLoadingSuggestions
-                    ? "候補を生成中..."
-                    : "発言候補を生成できませんでした"}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "1rem",
-          }}
-        >
-          {children}
+      <section className="bai-ai-section">
+        <div className="bai-ai-icon">
+          <SparklesIcon />
         </div>
-
-        <div
-          style={{
-            padding: "1rem",
-            borderTop: "1px solid #e5e7eb",
-          }}
+        <div className="bai-ai-copy">
+          <strong>次の発言を考える</strong>
+          <span>
+            {apiKeyExists
+              ? "会話の流れから2つ提案します"
+              : "Gemini APIキーを設定すると使えます"}
+          </span>
+        </div>
+        <button
+          className={`bai-small-button ${apiKeyExists ? "bai-small-button--accent" : ""}`}
+          onClick={apiKeyExists ? handleGenerateSuggestions : openOptionsPage}
+          disabled={isLoadingSuggestions}
         >
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              gap: "1rem",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "0.5rem",
-                flex: 1,
-              }}
-            >
+          {isLoadingSuggestions ? "生成中" : apiKeyExists ? (showSuggestions ? "閉じる" : "生成") : "設定"}
+        </button>
+      </section>
+
+      {showSuggestions && (
+        <section className="bai-suggestions" aria-live="polite">
+          <div className="bai-section-label">SUGGESTIONS</div>
+          {suggestions.length > 0 ? (
+            suggestions.map((suggestion, index) => (
               <button
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "#3b82f6",
-                  color: "white",
-                  borderRadius: "0.25rem",
-                  border: "none",
-                  cursor: "pointer",
-                  width: "100%",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}
+                key={index}
+                className="bai-suggestion-card"
                 onClick={() => {
-                  exportCaptionsToMarkdown(captions, false);
+                  navigator.clipboard.writeText(suggestion);
+                  setShowSuggestions(false);
                 }}
               >
-                Markdownダウンロード
+                <span>{suggestion}</span>
+                <span className="bai-copy-label">COPY</span>
               </button>
-              <button
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: "#60a5fa",
-                  color: "white",
-                  borderRadius: "0.25rem",
-                  border: "none",
-                  cursor: "pointer",
-                  width: "100%",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}
-                onClick={() => {
-                  exportCaptionsToMarkdown(captions, true);
-                }}
-                title="保存先を選択してダウンロードします"
-              >
-                保存先を選択してダウンロード
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
-              <button
-                style={{
-                  padding: "0.5rem 1rem",
-                  backgroundColor: notionSettings ? "#4f46e5" : "#9ca3af",
-                  color: "white",
-                  borderRadius: "0.25rem",
-                  border: "none",
-                  cursor: notionSettings ? "pointer" : "not-allowed",
-                  opacity: notionSettings ? 1 : 0.7,
-                  width: "100%",
-                  textAlign: "center",
-                  fontSize: "12px",
-                }}
-                disabled={!notionSettings}
-                title={
-                  notionSettings
-                    ? "Notionにエクスポート"
-                    : "Notion連携が未設定です"
-                }
-                onClick={() => {
-                  if (!notionSettings) return;
-
-                  setIsExporting(true);
-                  setExportStatus(null);
-
-                  // 会議タイトルを取得（例: ページタイトルから）
-                  const meetingTitle =
-                    document.title ||
-                    "会議_" + new Date().toISOString().split("T")[0];
-
-                  chrome.runtime.sendMessage(
-                    {
-                      type: "NOTION_EXPORT",
-                      payload: { captions, meetingTitle },
-                    },
-                    (res) => {
-                      setIsExporting(false);
-                      if (res.ok) {
-                        setExportStatus({
-                          success: true,
-                          message: "Notionに保存しました",
-                        });
-                      } else {
-                        setExportStatus({
-                          success: false,
-                          message: `失敗: ${res.error}`,
-                        });
-                      }
-
-                      // 5秒後にステータスをクリア
-                      setTimeout(() => {
-                        setExportStatus(null);
-                      }, 5000);
-                    }
-                  );
-                }}
-              >
-                {isExporting ? "保存中..." : "Notionエクスポート"}
-              </button>
-
-              {!notionSettings && (
-                <div
-                  style={{
-                    marginTop: "0.5rem",
-                    fontSize: "0.75rem",
-                    color: "#6b7280",
-                    textAlign: "center",
-                  }}
-                >
-                  <button
-                    onClick={() => {
-                      chrome.runtime.sendMessage({ type: "open-options-page" });
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      padding: 0,
-                      color: "#4f46e5",
-                      textDecoration: "underline",
-                      cursor: "pointer",
-                      fontSize: "0.75rem",
-                    }}
-                  >
-                    Notion連携を設定する
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* エクスポートステータスの表示 */}
-          {exportStatus && (
-            <div
-              style={{
-                marginTop: "0.5rem",
-                padding: "0.5rem",
-                backgroundColor: exportStatus.success ? "#ecfdf5" : "#fef2f2",
-                borderRadius: "0.25rem",
-                color: exportStatus.success ? "#065f46" : "#991b1b",
-                fontSize: "0.875rem",
-                textAlign: "center",
-              }}
-            >
-              {exportStatus.message}
+            ))
+          ) : (
+            <div className="bai-suggestion-empty">
+              {isLoadingSuggestions ? "会話を読み取っています…" : "候補を生成できませんでした"}
             </div>
           )}
+        </section>
+      )}
+
+      <div className="bai-scroll-area">{children}</div>
+
+      <footer className="bai-footer">
+        <div className="bai-footer-heading">
+          <span>EXPORT</span>
+          {exportStatus && (
+            <span className={exportStatus.success ? "bai-status--success" : "bai-status--error"}>
+              {exportStatus.message}
+            </span>
+          )}
         </div>
-      </div>
-    </div>
+        <div className="bai-export-actions">
+          <button className="bai-export-button bai-export-button--primary" onClick={() => exportCaptionsToMarkdown(captions, false)}>
+            <DownloadIcon />
+            <span>Markdown</span>
+          </button>
+          <button className="bai-export-button" onClick={() => exportCaptionsToMarkdown(captions, true)} title="保存先を選択してダウンロードします">
+            <FolderIcon />
+            <span>保存先…</span>
+          </button>
+          <button
+            className="bai-export-button"
+            disabled={!notionSettings || isExporting}
+            onClick={handleNotionExport}
+            title={notionSettings ? "Notionにエクスポート" : "Notion連携が未設定です"}
+          >
+            <ExportIcon />
+            <span>{isExporting ? "保存中" : "Notion"}</span>
+          </button>
+        </div>
+        {!notionSettings && (
+          <button className="bai-settings-link" onClick={openOptionsPage}>
+            Notion連携を設定
+          </button>
+        )}
+      </footer>
+    </aside>
   );
 };
 
