@@ -535,7 +535,7 @@ export const injectUI = () => {
 
     .bai-export-actions {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
       gap: 6px;
     }
 
@@ -563,6 +563,23 @@ export const injectUI = () => {
       min-width: 0;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .bai-export-button--icon {
+      width: 34px;
+      padding: 0;
+    }
+
+    /* 右端に置くため、ツールチップは右揃えではみ出しを防ぐ */
+    .bai-export-button--icon[data-tooltip]::before {
+      left: auto;
+      right: 0;
+      transform: translate(0, 3px);
+    }
+
+    .bai-export-button--icon[data-tooltip]:hover::before,
+    .bai-export-button--icon[data-tooltip]:focus-visible::before {
+      transform: translate(0, 0);
     }
 
     .bai-export-button[data-tooltip] {

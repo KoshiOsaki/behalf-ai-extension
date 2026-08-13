@@ -153,6 +153,58 @@ export const observeCaptionLifecycle = (
 };
 
 /**
+ * 字幕からマークダウン本文とファイル名を生成する
+ * @returns 字幕が空の場合は null
+ */
+export const buildCaptionsMarkdown = (
+  captions: CaptionData[]
+): { fileName: string; content: string } | null => {
+  if (captions.length === 0) return null;
+
+  const today = getCurrentDate();
+  const meetingTitle = getMeetingTitle() ?? "meeting";
+  const fileName = `${today}_${meetingTitle}`;
+
+  // 時間ごとにグループ化する（10分間隔）
+  const timeGroups: { [key: string]: CaptionExportData[] } = {};
+
+  captions.forEach((caption) => {
+    const date = new Date(caption.timestamp);
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = Math.floor(date.getMinutes() / 10) * 10;
+    const minutesStr = minutes.toString().padStart(2, "0");
+    const timeKey = `${hours}:${minutesStr}`;
+
+    if (!timeGroups[timeKey]) {
+      timeGroups[timeKey] = [];
+    }
+
+    timeGroups[timeKey].push({
+      speaker: caption.speaker,
+      content: caption.text,
+      timestamp: date.toISOString(),
+    });
+  });
+
+  // マークダウンテキストを生成
+  let markdownContent = `# ${meetingTitle} - ${today}\n\n`;
+
+  Object.keys(timeGroups)
+    .sort()
+    .forEach((timeKey) => {
+      markdownContent += `\n## ${timeKey}\n \n`;
+
+      timeGroups[timeKey].forEach((item) => {
+        markdownContent += `${item.speaker}: ${item.content}\n`;
+      });
+
+      markdownContent += "\n \n";
+    });
+
+  return { fileName, content: markdownContent };
+};
+
+/**
  * 字幕をマークダウンファイルとしてエクスポートする
  * @param captions 字幕データの配列
  * @param saveAs 保存先を選択するダイアログを表示するかどうか
@@ -162,58 +214,19 @@ export const exportCaptionsToMarkdown = (
   saveAs: boolean = false
 ): void => {
   try {
-    if (captions.length === 0) {
+    const markdown = buildCaptionsMarkdown(captions);
+    if (!markdown) {
       console.warn("Gijiro: エクスポートする字幕がありません");
       return;
     }
-
-    const meetingTitle = getMeetingTitle() || "会議";
-    const today = getCurrentDate();
-    const fileName = `${today}_${meetingTitle}`;
-
-    // 時間ごとにグループ化する（10分間隔）
-    const timeGroups: { [key: string]: CaptionExportData[] } = {};
-
-    captions.forEach((caption) => {
-      const date = new Date(caption.timestamp);
-      const hours = date.getHours().toString().padStart(2, "0");
-      const minutes = Math.floor(date.getMinutes() / 10) * 10;
-      const minutesStr = minutes.toString().padStart(2, "0");
-      const timeKey = `${hours}:${minutesStr}`;
-
-      if (!timeGroups[timeKey]) {
-        timeGroups[timeKey] = [];
-      }
-
-      timeGroups[timeKey].push({
-        speaker: caption.speaker,
-        content: caption.text,
-        timestamp: date.toISOString(),
-      });
-    });
-
-    // マークダウンテキストを生成
-    let markdownContent = `# ${meetingTitle} - ${today}\n\n`;
-
-    Object.keys(timeGroups)
-      .sort()
-      .forEach((timeKey) => {
-        markdownContent += `\n## ${timeKey}\n \n`;
-
-        timeGroups[timeKey].forEach((item) => {
-          markdownContent += `${item.speaker}: ${item.content}\n`;
-        });
-
-        markdownContent += "\n \n";
-      });
 
     // バックグラウンドスクリプトにダウンロードリクエストを送信
     chrome.runtime.sendMessage(
       {
         type: "download-markdown",
         data: {
-          name: fileName,
-          content: markdownContent,
+          name: markdown.fileName,
+          content: markdown.content,
           saveAs: saveAs,
         },
       },
@@ -231,5 +244,38 @@ export const exportCaptionsToMarkdown = (
       "Gijiro: 字幕のエクスポート中にエラーが発生しました",
       error
     );
+  }
+};
+
+/**
+ * 字幕をマークダウン形式でクリップボードにコピーする
+ * @returns コピーに成功したかどうか
+ */
+export const copyCaptionsToClipboard = async (
+  captions: CaptionData[]
+): Promise<boolean> => {
+  const markdown = buildCaptionsMarkdown(captions);
+  if (!markdown) return false;
+
+  try {
+    await navigator.clipboard.writeText(markdown.content);
+    return true;
+  } catch (error) {
+    // Meet 側のフォーカス状態などで Clipboard API が失敗することがあるため、
+    // 旧来の execCommand にフォールバックする。
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = markdown.content;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return ok;
+    } catch (fallbackError) {
+      console.error("Gijiro: クリップボードへのコピーに失敗しました", fallbackError);
+      return false;
+    }
   }
 };

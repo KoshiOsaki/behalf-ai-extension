@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CaptionData } from "../types";
-import { exportCaptionsToMarkdown } from "../utils/caption";
+import { copyCaptionsToClipboard, exportCaptionsToMarkdown } from "../utils/caption";
 import { generateSuggestions } from "../utils/suggestionGenerator";
 
 type Props = {
@@ -36,6 +36,19 @@ const ExportIcon = () => (
   </svg>
 );
 
+const CopyIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M9 9V5.75C9 4.78 9.78 4 10.75 4h7.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75H15" />
+    <path d="M4 10.75C4 9.78 4.78 9 5.75 9h7.5c.97 0 1.75.78 1.75 1.75v7.5c0 .97-.78 1.75-1.75 1.75h-7.5C4.78 20 4 19.22 4 18.25v-7.5Z" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </svg>
+);
+
 /** Google Meetの会話ログを表示するサイドパネル */
 const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -48,10 +61,33 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
     databaseId: string;
   } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
   const [exportStatus, setExportStatus] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
+
+  const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    };
+  }, []);
+
+  const handleCopyAll = async () => {
+    const success = await copyCaptionsToClipboard(captions);
+    setExportStatus({
+      success,
+      message: success ? "コピーしました" : "コピーできませんでした",
+    });
+    setIsCopied(success);
+    if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
+    copyResetTimer.current = setTimeout(() => {
+      setIsCopied(false);
+      setExportStatus(null);
+    }, 2000);
+  };
 
   const openOptionsPage = () => {
     chrome.runtime.sendMessage({ type: "open-options-page" });
@@ -97,11 +133,19 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
     return () => document.removeEventListener("keydown", handleEscKey);
   }, [isOpen, onClose]);
 
+  // secret / databaseId のどちらかが空なら未設定扱いにする
+  // （旧バージョンは空文字のオブジェクトを保存していたため、その残骸も弾く）
+  const normalizeNotionSettings = (
+    value: { secret?: string; databaseId?: string } | undefined | null
+  ) => (value?.secret && value?.databaseId
+    ? { secret: value.secret, databaseId: value.databaseId }
+    : null);
+
   useEffect(() => {
     const checkSettings = async () => {
       const storage = await chrome.storage.local.get(["geminiApiKey", "notion"]);
       setApiKeyExists(!!storage.geminiApiKey);
-      setNotionSettings(storage.notion || null);
+      setNotionSettings(normalizeNotionSettings(storage.notion));
     };
 
     checkSettings();
@@ -112,7 +156,8 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
     ) => {
       if (areaName !== "local") return;
       if (changes.geminiApiKey) setApiKeyExists(!!changes.geminiApiKey.newValue);
-      if (changes.notion) setNotionSettings(changes.notion.newValue || null);
+      if (changes.notion)
+        setNotionSettings(normalizeNotionSettings(changes.notion.newValue));
     };
 
     chrome.storage.onChanged.addListener(handleStorageChange);
@@ -253,6 +298,15 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
           >
             <ExportIcon />
             <span>{isExporting ? "保存中" : "Notion"}</span>
+          </button>
+          <button
+            className="bai-export-button bai-export-button--icon"
+            onClick={handleCopyAll}
+            disabled={captions.length === 0}
+            aria-label="すべてMarkdownでコピー"
+            data-tooltip="すべてMarkdownでコピー"
+          >
+            {isCopied ? <CheckIcon /> : <CopyIcon />}
           </button>
         </div>
         {!notionSettings && (
