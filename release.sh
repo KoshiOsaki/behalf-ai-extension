@@ -4,7 +4,7 @@
 VERSION=$(grep -o 'version: "[^"]*"' wxt.config.ts | cut -d'"' -f2)
 VERSION_TAG="v$VERSION"
 PACKAGE_NAME=$(grep -o '"name": "[^"]*"' package.json | head -1 | cut -d'"' -f4)
-ZIPFILE=".output/behalf-ai-extension-$VERSION.zip"
+ZIPFILE=".output/gijiro-$VERSION.zip"
 WXT_ZIPFILE=".output/$PACKAGE_NAME-$VERSION-chrome.zip"
 
 echo "ビルドとリリースを開始します: バージョン $VERSION_TAG"

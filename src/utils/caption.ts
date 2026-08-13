@@ -43,7 +43,7 @@ export const observeCaptionLifecycle = (
       }
     } catch (error) {
       console.error(
-        "Meet Caption Assistant: 字幕データの抽出中にエラーが発生しました",
+        "Gijiro: 字幕データの抽出中にエラーが発生しました",
         error
       );
     }
@@ -163,7 +163,7 @@ export const exportCaptionsToMarkdown = (
 ): void => {
   try {
     if (captions.length === 0) {
-      console.warn("Meet Caption Assistant: エクスポートする字幕がありません");
+      console.warn("Gijiro: エクスポートする字幕がありません");
       return;
     }
 
@@ -220,7 +220,7 @@ export const exportCaptionsToMarkdown = (
       (response) => {
         if (response && response.error) {
           console.error(
-            "Meet Caption Assistant: マークダウンのダウンロード中にエラーが発生しました",
+            "Gijiro: マークダウンのダウンロード中にエラーが発生しました",
             response.error
           );
         }
@@ -228,7 +228,7 @@ export const exportCaptionsToMarkdown = (
     );
   } catch (error) {
     console.error(
-      "Meet Caption Assistant: 字幕のエクスポート中にエラーが発生しました",
+      "Gijiro: 字幕のエクスポート中にエラーが発生しました",
       error
     );
   }

@@ -158,7 +158,7 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
             <span />
           </div>
           <div>
-            <h2>会話ログ</h2>
+            <h2>Gijiro</h2>
             <div className="bai-live-meta">
               <span className="bai-live-dot" />
               <span>LIVE</span>

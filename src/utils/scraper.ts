@@ -31,7 +31,7 @@ const labelIncludesAny = (label: string, keywords: string[]): boolean =>
 export const isCheckCaptionActive = (): boolean => {
   const captionButton = findCaptionButton();
   if (!captionButton) {
-    console.log("Meet Caption Assistant: 字幕ボタンが見つかりません");
+    console.log("Gijiro: 字幕ボタンが見つかりません");
     return false;
   }
 
@@ -98,7 +98,7 @@ export const getMeetingTitle = (): string | null => {
   const codeMatch = location.pathname.match(/([a-z]{3,4}-[a-z]{3,4}-[a-z]{3,4})/i);
   if (codeMatch) return codeMatch[1];
 
-  console.warn("Meet Caption Assistant: ミーティング名を取得できませんでした");
+  console.warn("Gijiro: ミーティング名を取得できませんでした");
   return null;
 };
 
@@ -202,7 +202,7 @@ export const getCaptionDataList = (): CaptionData[] => {
   // 「字幕」とラベル付けされた領域を取得
   const captionRegion = findCaptionContainer();
   if (!captionRegion) {
-    console.log("Meet Caption Assistant: 字幕領域が見つかりません");
+    console.log("Gijiro: 字幕領域が見つかりません");
     return [];
   }
 

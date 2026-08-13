@@ -1,14 +1,14 @@
-# Behalf AI Extension 使い方マニュアル
+# Gijiro 使い方マニュアル
 
 ## インストール方法
 
 1. [GitHub リポジトリ](https://github.com/KoshiOsaki/behalf-ai-extension)の右側にある「Releases」セクションから最新のリリースを確認します
-2. 最新リリースページから `behalf-ai-extension-x.x.x.zip` ファイルをダウンロードします
+2. 最新リリースページから `gijiro-x.x.x.zip` ファイルをダウンロードします
 3. ダウンロードした ZIP ファイルを任意の場所に展開します
 4. Google Chrome を開き、アドレスバーに `chrome://extensions/` と入力して拡張機能ページに移動します
 5. 右上の「デベロッパーモード」をオンにします
 6. 「パッケージ化されていない拡張機能を読み込む」ボタンをクリックします
-7. 先ほど展開した `behalf-ai-extension-x.x.x` フォルダを選択します
+7. 先ほど展開した `gijiro-x.x.x` フォルダを選択します
 8. 拡張機能が正常にインストールされると、Chrome の拡張機能リストに表示されます
 
 ![インストール手順](../assets/manual.jpg)

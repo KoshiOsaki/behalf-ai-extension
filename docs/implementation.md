@@ -1,6 +1,6 @@
 # 実装メモ
 
-Google Meet の字幕アシスタント拡張機能。Meet ページに字幕履歴のサイドドロワーを表示し、Markdown / Notion へのエクスポートと Gemini による発言候補生成を行う。
+Gijiro は Google Meet のローカル議事録拡張機能。Meet ページに字幕履歴のサイドドロワーを表示し、Markdown / Notion へのエクスポートと Gemini による発言候補生成を行う。
 
 ## 全体構成
 

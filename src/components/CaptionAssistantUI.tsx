@@ -8,7 +8,7 @@ import { observeCaptionLifecycle } from "../utils/caption";
 import { getMeetingTitle, isCheckCaptionActive } from "../utils/scraper";
 
 /**
- * Meet Caption Assistantのサイドドロワー UI
+ * Gijiroのサイドドロワー UI
  */
 const CaptionAssistantUI: React.FC = () => {
   const [isOpen, setIsOpen] = useState(true); // 初期状態を開いた状態に変更
@@ -674,19 +674,23 @@ export const injectUI = () => {
     .bai-toggle-button {
       position: relative;
       display: flex;
-      min-width: 86px;
-      height: 40px;
+      min-width: 100px;
+      height: 46px;
       align-items: center;
       justify-content: center;
-      padding: 0 16px;
+      padding: 0 20px;
       color: #fff;
-      font-size: 12px !important;
-      font-weight: 650 !important;
-      letter-spacing: .01em;
-      background: linear-gradient(135deg, #7165dd, #9a69dc);
-      border: 1px solid rgba(255, 255, 255, .2);
-      border-radius: 11px;
-      box-shadow: 0 8px 26px rgba(84, 65, 180, .3);
+      font-size: 14px !important;
+      font-weight: 720 !important;
+      letter-spacing: .015em;
+      text-shadow: 0 1px 2px rgba(56, 44, 125, .32);
+      background: linear-gradient(135deg, #a392f7 0%, #8473ed 52%, #7163dc 100%);
+      border: 1px solid rgba(255, 255, 255, .34);
+      border-radius: 14px;
+      box-shadow:
+        0 14px 38px rgba(87, 69, 187, .48),
+        0 4px 12px rgba(0, 0, 0, .34),
+        inset 0 1px 0 rgba(255, 255, 255, .22);
       backdrop-filter: blur(18px);
       cursor: pointer;
       transition: filter 140ms ease, transform 140ms ease, box-shadow 140ms ease;
@@ -694,22 +698,27 @@ export const injectUI = () => {
 
     .bai-toggle-button:hover {
       filter: brightness(1.08);
-      box-shadow: 0 10px 30px rgba(84, 65, 180, .38);
-      transform: translateY(-1px);
+      box-shadow:
+        0 17px 44px rgba(87, 69, 187, .56),
+        0 5px 14px rgba(0, 0, 0, .36),
+        inset 0 1px 0 rgba(255, 255, 255, .28);
+      transform: translateY(-2px);
     }
 
     .bai-toggle-button:active { transform: translateY(0); }
 
     .bai-toggle-notification-dot {
       position: absolute;
-      top: -3px;
-      right: -3px;
-      width: 10px;
-      height: 10px;
-      background: #ff4d5e;
-      border: 2px solid #17181b;
+      top: -5px;
+      right: -5px;
+      width: 14px;
+      height: 14px;
+      background: #76d2a5;
+      border: 3px solid #25232d;
       border-radius: 50%;
-      box-shadow: 0 0 0 2px rgba(255, 77, 94, .14);
+      box-shadow:
+        0 0 0 2px rgba(118, 210, 165, .16),
+        0 4px 10px rgba(50, 158, 106, .42);
     }
 
     @keyframes spin {
@@ -734,7 +743,7 @@ export const injectUI = () => {
     root.render(<CaptionAssistantUI />);
   } catch (error) {
     console.error(
-      "Meet Caption Assistant: UIの挿入中にエラーが発生しました",
+      "Gijiro: UIの挿入中にエラーが発生しました",
       error
     );
   }
