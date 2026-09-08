@@ -728,6 +728,33 @@ export const injectUI = () => {
     .bai-status--success { color: #78d8a8; }
     .bai-status--error { color: #f29c9c; }
 
+    /* エラーは1行に収まらないことがあるので、ボタンの上に折り返し表示する */
+    .bai-export-error {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin: 0 0 8px;
+      padding: 8px 9px;
+      border: 1px solid rgba(242, 156, 156, .34);
+      border-radius: 8px;
+      background: rgba(242, 156, 156, .12);
+      color: #f6bcbc;
+      font-size: 11px;
+      line-height: 1.45;
+      word-break: break-word;
+    }
+
+    .bai-export-error svg {
+      width: 14px;
+      height: 14px;
+      flex: none;
+      margin-top: 1px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+    }
+
     .bai-export-actions {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr)) auto;

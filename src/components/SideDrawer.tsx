@@ -43,6 +43,13 @@ const CopyIcon = () => (
   </svg>
 );
 
+const AlertIcon = () => (
+  <svg aria-hidden="true" viewBox="0 0 24 24">
+    <path d="M12 4.5 21 19.5H3L12 4.5Z" />
+    <path d="M12 10v4m0 2.6v.4" />
+  </svg>
+);
+
 const CheckIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24">
     <path d="m5 12.5 4.5 4.5L19 7.5" />
@@ -61,6 +68,7 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
     databaseId: string;
   } | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [copiedSuggestionIndex, setCopiedSuggestionIndex] = useState<number | null>(
     null
@@ -72,11 +80,13 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
 
   const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const suggestionCopyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exportStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
       if (suggestionCopyTimer.current) clearTimeout(suggestionCopyTimer.current);
+      if (exportStatusTimer.current) clearTimeout(exportStatusTimer.current);
     };
   }, []);
 
@@ -99,10 +109,37 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
     });
     setIsCopied(success);
     if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-    copyResetTimer.current = setTimeout(() => {
-      setIsCopied(false);
-      setExportStatus(null);
-    }, 2000);
+    copyResetTimer.current = setTimeout(() => setIsCopied(false), 2000);
+    if (exportStatusTimer.current) clearTimeout(exportStatusTimer.current);
+    exportStatusTimer.current = setTimeout(
+      () => setExportStatus(null),
+      success ? 2000 : 8000
+    );
+  };
+
+  // 保存先ダイアログでのキャンセルは失敗ではないので通知を出さない
+  const isUserCanceled = (error?: string) =>
+    !!error && /USER_CANCELED|canceled/i.test(error);
+
+  const handleMarkdownExport = async (saveAs: boolean) => {
+    if (exportStatusTimer.current) clearTimeout(exportStatusTimer.current);
+    setExportStatus(null);
+    setIsDownloading(true);
+
+    const result = await exportCaptionsToMarkdown(captions, saveAs);
+
+    setIsDownloading(false);
+    if (isUserCanceled(result.error)) return;
+
+    setExportStatus(
+      result.success
+        ? { success: true, message: "ダウンロードしました" }
+        : { success: false, message: `失敗: ${result.error ?? "不明なエラー"}` }
+    );
+    exportStatusTimer.current = setTimeout(
+      () => setExportStatus(null),
+      result.success ? 3000 : 8000
+    );
   };
 
   const openOptionsPage = () => {
@@ -181,6 +218,7 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
   const handleNotionExport = () => {
     if (!notionSettings) return;
 
+    if (exportStatusTimer.current) clearTimeout(exportStatusTimer.current);
     setIsExporting(true);
     setExportStatus(null);
     const meetingTitle =
@@ -193,12 +231,17 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
       },
       (res) => {
         setIsExporting(false);
+        const error = chrome.runtime.lastError?.message || res?.error;
+        const ok = !error && res?.ok;
         setExportStatus(
-          res.ok
+          ok
             ? { success: true, message: "Notionに保存しました" }
-            : { success: false, message: `失敗: ${res.error}` }
+            : { success: false, message: `失敗: ${error ?? "不明なエラー"}` }
         );
-        setTimeout(() => setExportStatus(null), 5000);
+        exportStatusTimer.current = setTimeout(
+          () => setExportStatus(null),
+          ok ? 3000 : 8000
+        );
       }
     );
   };
@@ -301,20 +344,29 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
       <footer className="bai-footer">
         <div className="bai-footer-heading">
           <span>EXPORT</span>
-          {exportStatus && (
-            <span className={exportStatus.success ? "bai-status--success" : "bai-status--error"}>
-              {exportStatus.message}
-            </span>
+          {exportStatus?.success && (
+            <span className="bai-status--success">{exportStatus.message}</span>
           )}
         </div>
+        {exportStatus && !exportStatus.success && (
+          <div className="bai-export-error" role="alert">
+            <AlertIcon />
+            <span>{exportStatus.message}</span>
+          </div>
+        )}
         <div className="bai-export-actions">
-          <button className="bai-export-button bai-export-button--primary" onClick={() => exportCaptionsToMarkdown(captions, false)}>
+          <button
+            className="bai-export-button bai-export-button--primary"
+            onClick={() => handleMarkdownExport(false)}
+            disabled={isDownloading || captions.length === 0}
+          >
             <DownloadIcon />
-            <span>Markdown</span>
+            <span>{isDownloading ? "保存中" : "Markdown"}</span>
           </button>
           <button
             className="bai-export-button"
-            onClick={() => exportCaptionsToMarkdown(captions, true)}
+            onClick={() => handleMarkdownExport(true)}
+            disabled={isDownloading || captions.length === 0}
             aria-label="保存先を選択してダウンロード"
             data-tooltip="保存先を選択してダウンロード"
           >

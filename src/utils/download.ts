@@ -41,10 +41,15 @@ export const downloadMarkdown = async (
   try {
     // データ URLを作成（サービスワーカーではBlobとURL.createObjectURLが使えないため）
     const encoder = new TextEncoder();
-    const data = encoder.encode(content);
-    const base64Data = btoa(
-      String.fromCharCode.apply(null, [...new Uint8Array(data)])
-    );
+    const bytes = encoder.encode(content);
+    // 全バイトを一度に引数展開すると、長い議事録で
+    // RangeError: Maximum call stack size exceeded になるためチャンクに分ける
+    const CHUNK_SIZE = 0x8000;
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK_SIZE));
+    }
+    const base64Data = btoa(binary);
     const dataUrl = `data:text/markdown;base64,${base64Data}`;
 
     // ファイル名を設定（デフォルトはDownloadsフォルダに保存）
@@ -61,11 +66,19 @@ export const downloadMarkdown = async (
     });
 
     // ダウンロードが完了するまで待機
-    await new Promise<void>((resolve) => {
+    // 中断された場合も待ち続けないよう、interrupted も終了として扱う
+    await new Promise<void>((resolve, reject) => {
       const listener = (delta: chrome.downloads.DownloadDelta) => {
-        if (delta.id === downloadId && delta.state?.current === "complete") {
+        if (delta.id !== downloadId) return;
+        const state = delta.state?.current;
+        if (state === "complete") {
           chrome.downloads.onChanged.removeListener(listener);
           resolve();
+        } else if (state === "interrupted") {
+          chrome.downloads.onChanged.removeListener(listener);
+          reject(
+            new Error(delta.error?.current ?? "ダウンロードが中断されました")
+          );
         }
       };
       chrome.downloads.onChanged.addListener(listener);

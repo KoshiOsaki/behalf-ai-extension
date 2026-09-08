@@ -204,47 +204,57 @@ export const buildCaptionsMarkdown = (
   return { fileName, content: markdownContent };
 };
 
+export type ExportResult = { success: boolean; error?: string };
+
 /**
  * 字幕をマークダウンファイルとしてエクスポートする
  * @param captions 字幕データの配列
  * @param saveAs 保存先を選択するダイアログを表示するかどうか
+ * @returns 成否とエラーメッセージ（UI側で通知するために返す）
  */
 export const exportCaptionsToMarkdown = (
   captions: CaptionData[],
   saveAs: boolean = false
-): void => {
-  try {
-    const markdown = buildCaptionsMarkdown(captions);
-    if (!markdown) {
-      console.warn("Gijiro: エクスポートする字幕がありません");
-      return;
-    }
-
-    // バックグラウンドスクリプトにダウンロードリクエストを送信
-    chrome.runtime.sendMessage(
-      {
-        type: "download-markdown",
-        data: {
-          name: markdown.fileName,
-          content: markdown.content,
-          saveAs: saveAs,
-        },
-      },
-      (response) => {
-        if (response && response.error) {
-          console.error(
-            "Gijiro: マークダウンのダウンロード中にエラーが発生しました",
-            response.error
-          );
-        }
+): Promise<ExportResult> => {
+  return new Promise((resolve) => {
+    try {
+      const markdown = buildCaptionsMarkdown(captions);
+      if (!markdown) {
+        console.warn("Gijiro: エクスポートする字幕がありません");
+        resolve({ success: false, error: "エクスポートする字幕がありません" });
+        return;
       }
-    );
-  } catch (error) {
-    console.error(
-      "Gijiro: 字幕のエクスポート中にエラーが発生しました",
-      error
-    );
-  }
+
+      // バックグラウンドスクリプトにダウンロードリクエストを送信
+      chrome.runtime.sendMessage(
+        {
+          type: "download-markdown",
+          data: {
+            name: markdown.fileName,
+            content: markdown.content,
+            saveAs: saveAs,
+          },
+        },
+        (response) => {
+          // background側が落ちた場合は response が undefined になる
+          const runtimeError = chrome.runtime.lastError?.message;
+          const error = runtimeError || response?.error;
+          if (error) {
+            console.error(
+              "Gijiro: マークダウンのダウンロード中にエラーが発生しました",
+              error
+            );
+            resolve({ success: false, error });
+            return;
+          }
+          resolve({ success: true });
+        }
+      );
+    } catch (error: any) {
+      console.error("Gijiro: 字幕のエクスポート中にエラーが発生しました", error);
+      resolve({ success: false, error: error?.message ?? String(error) });
+    }
+  });
 };
 
 /**
