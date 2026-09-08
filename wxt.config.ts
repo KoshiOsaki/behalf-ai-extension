@@ -7,7 +7,7 @@ export default defineConfig({
   manifest: {
     name: "Gijiro",
     description: "会話を自分のPCに残せる、Google Meet用のローカル議事録ツール",
-    version: "0.1.3",
+    version: "0.1.5",
     options_ui: {
       page: "options/index.html",
       open_in_tab: true,

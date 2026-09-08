@@ -9,6 +9,9 @@ WXT_ZIPFILE=".output/$PACKAGE_NAME-$VERSION-chrome.zip"
 
 echo "ビルドとリリースを開始します: バージョン $VERSION_TAG"
 
+# Node 20 を使う（Homebrew の Node 25 では wxt submit が起動しない）
+export PATH="$HOME/.nodenv/shims:$PATH"
+
 # ビルド実行
 echo "拡張機能をビルドしています..."
 npm run build
@@ -21,6 +24,22 @@ npm run zip
 # ZIPファイルの移動とリネーム
 cp "$WXT_ZIPFILE" "$ZIPFILE"
 echo "ZIPファイルを $ZIPFILE にコピーしました"
+
+# Chrome ウェブストアへアップロード（.env.submit の認証情報を使用）
+# デフォルトは下書きへのアップロードのみ。審査提出はダッシュボードから手動で行う。
+# 審査提出まで一気にやりたい場合は SUBMIT_REVIEW=1 ./release.sh
+if [ -f .env.submit ]; then
+  if [ "$SUBMIT_REVIEW" = "1" ]; then
+    echo "Chrome ウェブストアにアップロードして審査に提出しています..."
+    npx wxt submit --chrome-zip "$WXT_ZIPFILE"
+  else
+    echo "Chrome ウェブストアの下書きにアップロードしています（審査提出はしません）..."
+    npx wxt submit --chrome-zip "$WXT_ZIPFILE" --chrome-skip-submit-review
+  fi
+else
+  echo "警告: .env.submit が無いため Chrome ウェブストアへの提出をスキップしました"
+  echo "      認証情報を作るには: npx wxt submit init"
+fi
 
 # GitHubリリース作成
 echo "GitHubリリースを作成しています..."
