@@ -19,7 +19,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const notionSecret = notionSecretInput.value.trim();
     const notionDatabaseId = notionDatabaseIdInput.value.trim();
     
-    
     // Notion設定を保存（両方揃っていない場合は未設定として削除する）
     if (notionSecret && notionDatabaseId) {
       await chrome.storage.local.set({
