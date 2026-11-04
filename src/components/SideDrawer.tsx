@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { CaptionData } from "../types";
 import { copyCaptionsToClipboard, exportCaptionsToMarkdown } from "../utils/caption";
-import { generateSuggestions } from "../utils/suggestionGenerator";
 
 type Props = {
   captions: CaptionData[];
@@ -9,13 +8,6 @@ type Props = {
   onClose: () => void;
   children: React.ReactNode;
 };
-
-const SparklesIcon = () => (
-  <svg aria-hidden="true" viewBox="0 0 24 24">
-    <path d="M12 3.4c.5 3.3 2.3 5.1 5.6 5.6-3.3.5-5.1 2.3-5.6 5.6-.5-3.3-2.3-5.1-5.6-5.6 3.3-.5 5.1-2.3 5.6-5.6Z" />
-    <path d="M18.2 14.6c.25 1.7 1.2 2.65 2.9 2.9-1.7.25-2.65 1.2-2.9 2.9-.25-1.7-1.2-2.65-2.9-2.9 1.7-.25 2.65-1.2 2.9-2.9ZM5.2 3.1c.2 1.25.9 1.95 2.15 2.15C6.1 5.45 5.4 6.15 5.2 7.4 5 6.15 4.3 5.45 3.05 5.25 4.3 5.05 5 4.35 5.2 3.1Z" />
-  </svg>
-);
 
 const DownloadIcon = () => (
   <svg aria-hidden="true" viewBox="0 0 24 24">
@@ -59,10 +51,6 @@ const CheckIcon = () => (
 /** Google Meetの会話ログを表示するサイドパネル */
 const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) => {
   const drawerRef = useRef<HTMLDivElement>(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const [apiKeyExists, setApiKeyExists] = useState(false);
   const [notionSettings, setNotionSettings] = useState<{
     secret: string;
     databaseId: string;
@@ -70,36 +58,20 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
   const [isExporting, setIsExporting] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
-  const [copiedSuggestionIndex, setCopiedSuggestionIndex] = useState<number | null>(
-    null
-  );
   const [exportStatus, setExportStatus] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
 
   const copyResetTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const suggestionCopyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const exportStatusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     return () => {
       if (copyResetTimer.current) clearTimeout(copyResetTimer.current);
-      if (suggestionCopyTimer.current) clearTimeout(suggestionCopyTimer.current);
       if (exportStatusTimer.current) clearTimeout(exportStatusTimer.current);
     };
   }, []);
-
-  // コピーしてもパネルは閉じない。閉じるのは✕ボタンだけ
-  const handleCopySuggestion = (suggestion: string, index: number) => {
-    navigator.clipboard.writeText(suggestion);
-    setCopiedSuggestionIndex(index);
-    if (suggestionCopyTimer.current) clearTimeout(suggestionCopyTimer.current);
-    suggestionCopyTimer.current = setTimeout(
-      () => setCopiedSuggestionIndex(null),
-      2000
-    );
-  };
 
   const handleCopyAll = async () => {
     const success = await copyCaptionsToClipboard(captions);
@@ -146,24 +118,6 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
     chrome.runtime.sendMessage({ type: "open-options-page" });
   };
 
-  const handleGenerateSuggestions = async () => {
-    setShowSuggestions(true);
-    setIsLoadingSuggestions(true);
-    // 前回の候補が残ったまま次の生成結果を待たないようにクリアする
-    setSuggestions([]);
-    setCopiedSuggestionIndex(null);
-
-    try {
-      const generatedSuggestions = await generateSuggestions(captions);
-      setSuggestions(generatedSuggestions);
-    } catch (error) {
-      console.error("発言候補の生成中にエラーが発生しました:", error);
-      setSuggestions([]);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-  };
-
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
@@ -194,8 +148,7 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
 
   useEffect(() => {
     const checkSettings = async () => {
-      const storage = await chrome.storage.local.get(["geminiApiKey", "notion"]);
-      setApiKeyExists(!!storage.geminiApiKey);
+      const storage = await chrome.storage.local.get(["notion"]);
       setNotionSettings(normalizeNotionSettings(storage.notion));
     };
 
@@ -206,7 +159,6 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
       areaName: string
     ) => {
       if (areaName !== "local") return;
-      if (changes.geminiApiKey) setApiKeyExists(!!changes.geminiApiKey.newValue);
       if (changes.notion)
         setNotionSettings(normalizeNotionSettings(changes.notion.newValue));
     };
@@ -275,69 +227,6 @@ const SideDrawer: React.FC<Props> = ({ captions, isOpen, onClose, children }) =>
           </svg>
         </button>
       </header>
-
-      <section className="bai-ai-section">
-        <div className="bai-ai-icon">
-          <SparklesIcon />
-        </div>
-        <div className="bai-ai-copy">
-          <strong>次の発言を考える</strong>
-          <span>
-            {apiKeyExists
-              ? "会話の流れから2つ提案します"
-              : "Gemini APIキーを設定すると使えます"}
-          </span>
-        </div>
-        <button
-          className={`bai-small-button ${apiKeyExists ? "bai-small-button--accent" : ""}`}
-          onClick={apiKeyExists ? handleGenerateSuggestions : openOptionsPage}
-          disabled={isLoadingSuggestions}
-        >
-          {isLoadingSuggestions ? "生成中" : apiKeyExists ? (showSuggestions ? "再生成" : "生成") : "設定"}
-        </button>
-      </section>
-
-      {showSuggestions && (
-        <section className="bai-suggestions" aria-live="polite">
-          <div className="bai-suggestions-heading">
-            <span className="bai-section-label">SUGGESTIONS</span>
-            <button
-              className="bai-suggestions-close"
-              onClick={() => setShowSuggestions(false)}
-              aria-label="発言候補を閉じる"
-            >
-              <svg aria-hidden="true" viewBox="0 0 24 24">
-                <path d="m7 7 10 10M17 7 7 17" />
-              </svg>
-            </button>
-          </div>
-          {suggestions.length > 0 ? (
-            suggestions.map((suggestion, index) => (
-              <div
-                key={index}
-                className="bai-suggestion-card"
-                onClick={() => handleCopySuggestion(suggestion, index)}
-              >
-                <span>{suggestion}</span>
-                <button
-                  className="bai-suggestion-copy"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    handleCopySuggestion(suggestion, index);
-                  }}
-                  aria-label="この候補をコピー"
-                >
-                  {copiedSuggestionIndex === index ? <CheckIcon /> : <CopyIcon />}
-                </button>
-              </div>
-            ))
-          ) : (
-            <div className="bai-suggestion-empty">
-              {isLoadingSuggestions ? "会話を読み取っています…" : "候補を生成できませんでした"}
-            </div>
-          )}
-        </section>
-      )}
 
       <div className="bai-scroll-area">{children}</div>
 

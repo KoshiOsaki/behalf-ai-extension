@@ -1,9 +1,13 @@
 import { defineBackground } from "wxt/sandbox";
 import { saveCaptionsToNotion } from "@/src/utils/notion";
-import { handleGeminiCall } from "@/src/utils/gemini";
 import { downloadMarkdown } from "@/src/utils/download";
 
 export default defineBackground(() => {
+  // 発言候補（Gemini）は廃止した。旧バージョンで保存した API キーを残さない
+  chrome.runtime.onInstalled.addListener(() => {
+    chrome.storage.local.remove("geminiApiKey");
+  });
+
   // メッセージリスナーを設定
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // マークダウンファイルのダウンロードメッセージを処理
@@ -16,15 +20,6 @@ export default defineBackground(() => {
         .then(sendResponse)
         .catch((error) => {
           console.error("マークダウンダウンロードエラー:", error);
-          sendResponse({ error: error.message });
-        });
-      return true; // 非同期応答のために必要
-    }
-    if (message.type === "call-gemini") {
-      handleGeminiCall(message.data)
-        .then(sendResponse)
-        .catch((error) => {
-          console.error("Gemini API呼び出しエラー:", error);
           sendResponse({ error: error.message });
         });
       return true; // 非同期応答のために必要
