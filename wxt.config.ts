@@ -17,6 +17,9 @@ export default defineConfig({
       type: "module",
     },
     permissions: ["storage", "downloads"],
+    // 字幕をこの PC に保存する（Native Messaging）人だけ設定画面で許可する。
+    // 必須にすると既存ユーザーの更新時に権限の再承認が求められ、拡張が無効化されるため
+    optional_permissions: ["nativeMessaging"],
     host_permissions: [
       "https://api.notion.com/*",
     ],

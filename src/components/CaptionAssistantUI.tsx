@@ -6,6 +6,14 @@ import { CaptionData } from "../types";
 import { CaptionEnableReminderToast } from "./CaptionEnableReminderToast";
 import { observeCaptionLifecycle } from "../utils/caption";
 import { getMeetingTitle, isCheckCaptionActive } from "../utils/scraper";
+import {
+  buildTranscriptContent,
+  buildTranscriptFileName,
+  getMeetingCode,
+} from "../utils/localTranscript";
+
+/** 字幕をローカルファイルへ書き出す間隔 */
+const TRANSCRIPT_WRITE_INTERVAL_MS = 3000;
 
 /**
  * Gijiroのサイドドロワー UI
@@ -61,6 +69,44 @@ const CaptionAssistantUI: React.FC = () => {
       disposeCaptionObserver();
     };
   }, []);
+
+  // 字幕をこの PC のファイルに書き出す（設定で ON のときだけ background が実際に書く）。
+  // 発言中は字幕が数百 ms ごとに伸びるので、最新の状態を一定間隔でまとめて送る
+  const latestCaptionsRef = useRef<CaptionData[]>([]);
+  const transcriptFileNameRef = useRef<string | null>(null);
+  const transcriptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    latestCaptionsRef.current = captions;
+    if (captions.length === 0 || transcriptTimerRef.current) return;
+
+    transcriptTimerRef.current = setTimeout(() => {
+      transcriptTimerRef.current = null;
+      const current = latestCaptionsRef.current;
+      if (current.length === 0) return;
+
+      const meetingCode = getMeetingCode();
+      const meetingTitle = getMeetingTitle();
+      // 会議名は途中で取れるようになることがあるので、ファイル名は最初に決めたものを使い続ける
+      if (!transcriptFileNameRef.current) {
+        const startedAt = Math.min(...current.map((caption) => caption.timestamp));
+        transcriptFileNameRef.current = buildTranscriptFileName(startedAt, meetingTitle, meetingCode);
+      }
+      chrome.runtime.sendMessage({
+        type: "local-transcript-write",
+        fileName: transcriptFileNameRef.current,
+        content: buildTranscriptContent(current, meetingTitle, meetingCode),
+      }).catch(() => {
+        // 拡張の更新直後などで background に届かないことがある。次の字幕で送り直す
+      });
+    }, TRANSCRIPT_WRITE_INTERVAL_MS);
+  }, [captions]);
+
+  useEffect(
+    () => () => {
+      if (transcriptTimerRef.current) clearTimeout(transcriptTimerRef.current);
+    },
+    []
+  );
 
   useEffect(() => {
     const handleToggleShortcut = (event: KeyboardEvent) => {
