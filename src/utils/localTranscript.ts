@@ -79,7 +79,9 @@ export const buildTranscriptFileName = (
 export const buildTranscriptContent = (
   captions: CaptionData[],
   meetingTitle: string | null,
-  meetingCode: string | null
+  meetingCode: string | null,
+  // 会議から退出したときだけ渡す。読む側（mtg-digest-dm 等）はこれで会議の終了を知る
+  endedAt?: Date
 ): string => {
   const sorted = [...captions].sort((a, b) => a.timestamp - b.timestamp);
   const started = sorted[0] ? new Date(sorted[0].timestamp) : new Date();
@@ -91,6 +93,7 @@ export const buildTranscriptContent = (
     `started_at: ${started.toISOString()}`,
     `updated_at: ${new Date().toISOString()}`,
     `lines: ${sorted.length}`,
+    endedAt ? `ended_at: ${endedAt.toISOString()}` : null,
     "---",
     "",
   ].filter((line): line is string => line !== null);

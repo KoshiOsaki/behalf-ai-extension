@@ -5,7 +5,12 @@ import CaptionsList from "./CaptionsList";
 import { CaptionData } from "../types";
 import { CaptionEnableReminderToast } from "./CaptionEnableReminderToast";
 import { observeCaptionLifecycle } from "../utils/caption";
-import { getMeetingTitle, isCheckCaptionActive } from "../utils/scraper";
+import {
+  getMeetingTitle,
+  isCallEndedScreen,
+  isCheckCaptionActive,
+  isInCall,
+} from "../utils/scraper";
 import {
   buildTranscriptContent,
   buildTranscriptFileName,
@@ -14,6 +19,8 @@ import {
 
 /** 字幕をローカルファイルへ書き出す間隔 */
 const TRANSCRIPT_WRITE_INTERVAL_MS = 3000;
+/** 通話終了画面に切り替わったかを確かめる間隔 */
+const CALL_END_CHECK_INTERVAL_MS = 1000;
 
 /**
  * Gijiroのサイドドロワー UI
@@ -71,42 +78,79 @@ const CaptionAssistantUI: React.FC = () => {
   }, []);
 
   // 字幕をこの PC のファイルに書き出す（設定で ON のときだけ background が実際に書く）。
-  // 発言中は字幕が数百 ms ごとに伸びるので、最新の状態を一定間隔でまとめて送る
+  // 発言中は字幕が数百 ms ごとに伸びるので、最新の状態を一定間隔でまとめて送る。
+  // 1 参加 = 1 ファイル。退出したら ended_at を付けて最後に 1 回書き、以後そのファイルは触らない
   const latestCaptionsRef = useRef<CaptionData[]>([]);
   const transcriptFileNameRef = useRef<string | null>(null);
   const transcriptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 今の参加の開始時刻。同じタブで再参加したら、それ以降の字幕だけを別ファイルに書く
+  const sessionStartedAtRef = useRef(0);
+  const sessionEndedRef = useRef(false);
+
+  const writeTranscript = (endedAt?: Date) => {
+    const current = latestCaptionsRef.current.filter(
+      (caption) => caption.timestamp >= sessionStartedAtRef.current
+    );
+    if (current.length === 0) return;
+
+    const meetingCode = getMeetingCode();
+    const meetingTitle = getMeetingTitle();
+    // 会議名は途中で取れるようになることがあるので、ファイル名は最初に決めたものを使い続ける
+    if (!transcriptFileNameRef.current) {
+      const startedAt = Math.min(...current.map((caption) => caption.timestamp));
+      transcriptFileNameRef.current = buildTranscriptFileName(startedAt, meetingTitle, meetingCode);
+    }
+    chrome.runtime.sendMessage({
+      type: "local-transcript-write",
+      fileName: transcriptFileNameRef.current,
+      content: buildTranscriptContent(current, meetingTitle, meetingCode, endedAt),
+    }).catch(() => {
+      // 拡張の更新直後などで background に届かないことがある。次の字幕で送り直す
+    });
+  };
+
+  const endTranscriptSession = () => {
+    if (sessionEndedRef.current) return;
+    sessionEndedRef.current = true;
+    if (transcriptTimerRef.current) {
+      clearTimeout(transcriptTimerRef.current);
+      transcriptTimerRef.current = null;
+    }
+    writeTranscript(new Date());
+  };
+
   useEffect(() => {
     latestCaptionsRef.current = captions;
-    if (captions.length === 0 || transcriptTimerRef.current) return;
+    if (captions.length === 0 || transcriptTimerRef.current || sessionEndedRef.current) return;
 
     transcriptTimerRef.current = setTimeout(() => {
       transcriptTimerRef.current = null;
-      const current = latestCaptionsRef.current;
-      if (current.length === 0) return;
-
-      const meetingCode = getMeetingCode();
-      const meetingTitle = getMeetingTitle();
-      // 会議名は途中で取れるようになることがあるので、ファイル名は最初に決めたものを使い続ける
-      if (!transcriptFileNameRef.current) {
-        const startedAt = Math.min(...current.map((caption) => caption.timestamp));
-        transcriptFileNameRef.current = buildTranscriptFileName(startedAt, meetingTitle, meetingCode);
-      }
-      chrome.runtime.sendMessage({
-        type: "local-transcript-write",
-        fileName: transcriptFileNameRef.current,
-        content: buildTranscriptContent(current, meetingTitle, meetingCode),
-      }).catch(() => {
-        // 拡張の更新直後などで background に届かないことがある。次の字幕で送り直す
-      });
+      if (!sessionEndedRef.current) writeTranscript();
     }, TRANSCRIPT_WRITE_INTERVAL_MS);
   }, [captions]);
 
-  useEffect(
-    () => () => {
+  // 通話終了画面への切り替わりで会議の終了を確定する。再参加したら新しいファイルに切り替える
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (!sessionEndedRef.current) {
+        if (isCallEndedScreen()) endTranscriptSession();
+        return;
+      }
+      if (isInCall()) {
+        sessionEndedRef.current = false;
+        sessionStartedAtRef.current = Date.now();
+        transcriptFileNameRef.current = null;
+      }
+    }, CALL_END_CHECK_INTERVAL_MS);
+
+    // タブを閉じた・別ページへ移ったとき。書き込みが間に合わないことがある（best effort）
+    window.addEventListener("pagehide", endTranscriptSession);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("pagehide", endTranscriptSession);
       if (transcriptTimerRef.current) clearTimeout(transcriptTimerRef.current);
-    },
-    []
-  );
+    };
+  }, []);
 
   useEffect(() => {
     const handleToggleShortcut = (event: KeyboardEvent) => {
