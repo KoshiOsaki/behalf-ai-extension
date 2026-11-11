@@ -49,17 +49,25 @@ export const getMeetingCode = (): string | null => {
  * 会議 1 回分のファイル名。参加し直すと字幕は空から取り直しになるので、
  * 最初の字幕の時刻を入れて別ファイルにする
  */
+// 名前の無い会議では Meet の見出しに会議コードが（重複して）入るので、会議名として扱わない
+const meaningfulTitle = (meetingTitle: string | null, meetingCode: string | null) => {
+  if (!meetingTitle) return null;
+  if (meetingCode && meetingTitle.split(meetingCode).join("").trim() === "") return null;
+  return meetingTitle;
+};
+
 export const buildTranscriptFileName = (
   sessionStartedAt: number,
   meetingTitle: string | null,
   meetingCode: string | null
 ): string => {
   const started = new Date(sessionStartedAt);
+  const title = meaningfulTitle(meetingTitle, meetingCode);
   const parts = [
     formatDate(started),
     `${pad(started.getHours())}${pad(started.getMinutes())}`,
     meetingCode,
-    meetingTitle && meetingTitle !== meetingCode ? sanitizeForFileName(meetingTitle) : null,
+    title ? sanitizeForFileName(title) : null,
   ].filter((part): part is string => Boolean(part));
   return `${parts.join("_")}.md`;
 };
@@ -78,7 +86,7 @@ export const buildTranscriptContent = (
 
   const header = [
     "---",
-    `title: ${JSON.stringify(meetingTitle ?? meetingCode ?? "meeting")}`,
+    `title: ${JSON.stringify(meaningfulTitle(meetingTitle, meetingCode) ?? meetingCode ?? "meeting")}`,
     meetingCode ? `meet_url: https://meet.google.com/${meetingCode}` : null,
     `started_at: ${started.toISOString()}`,
     `updated_at: ${new Date().toISOString()}`,
