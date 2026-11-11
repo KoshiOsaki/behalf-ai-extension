@@ -213,3 +213,33 @@ export const getCaptionDataList = (): CaptionData[] => {
     .map(parseCaptionEntry)
     .filter((caption) => caption.text.length > 0);
 };
+
+// 通話中だけ出る「通話から退出」ボタン（aria-label の locale 差を吸収する）
+const LEAVE_CALL_SELECTOR =
+  'button[aria-label*="通話から退出"], button[aria-label*="Leave call" i], button[aria-label*="leave the call" i]';
+
+// 退出後の画面（「通話から退出しました」「再参加」）に出る文言
+const CALL_ENDED_TEXT =
+  /通話から退出しました|会議から退出しました|ミーティングから退出しました|通話は終了しました|会議は終了しました|削除されました|You left the (call|meeting)|You've left the (call|meeting)|The call has ended|You've been removed/i;
+const REJOIN_BUTTON_TEXT = /^(再参加|Rejoin)$/i;
+
+export const isInCall = (): boolean => {
+  if (document.querySelector(LEAVE_CALL_SELECTOR)) return true;
+  // aria-label が想定外の言語・文言でも、退出ボタンの Material icon（call_end）で拾う
+  return Array.from(document.querySelectorAll("button i, button span")).some(
+    (icon) => icon.textContent?.trim() === "call_end"
+  );
+};
+
+/**
+ * 通話から退出した後の画面（通話終了画面）が出ているか。
+ * 通話中のコントロールが消え、かつ「退出しました」系の文言か「再参加」ボタンがあるときだけ true にする
+ */
+export const isCallEndedScreen = (): boolean => {
+  if (isInCall()) return false;
+  const hasRejoinButton = Array.from(document.querySelectorAll("button")).some((button) =>
+    REJOIN_BUTTON_TEXT.test(button.textContent?.trim() ?? "")
+  );
+  if (hasRejoinButton) return true;
+  return CALL_ENDED_TEXT.test(document.body?.innerText ?? "");
+};
