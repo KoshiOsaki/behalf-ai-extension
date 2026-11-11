@@ -149,6 +149,33 @@ https://www.notion.so/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</pre
         />
       </label>
 
+      <div class="info-box" style="margin-bottom: 20px">
+        <h2>💾 字幕をこの PC に保存（Claude Code などから読む用）</h2>
+        <p>
+          会議中の字幕を数秒ごとに <code>~/.gijiro/meetings/</code> の Markdown
+          ファイルに書き出します。ターミナルの Claude Code などから会議の内容を読ませるときに使います。
+          ファイルはこの PC の中にだけ保存され、外部には送信されません。
+        </p>
+        <p>
+          使う前に、リポジトリでホストを登録してください（初回だけ）:
+        </p>
+        <pre
+          id="installCommand"
+          style="
+            background-color: #f1f5f9;
+            padding: 8px;
+            border-radius: 4px;
+            overflow-x: auto;
+          "
+        ></pre>
+        <label style="display: flex; align-items: center; gap: 8px">
+          <input id="localTranscriptEnabled" type="checkbox" style="width: auto; margin: 0" />
+          字幕をこの PC に保存する
+        </label>
+        <button id="pingHost" type="button" style="background-color: #64748b">接続テスト</button>
+        <span id="pingStatus"></span>
+      </div>
+
       <button id="save">保存</button>
       <span id="status"></span>
     </div>
