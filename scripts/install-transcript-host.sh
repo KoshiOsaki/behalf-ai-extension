@@ -12,26 +12,49 @@ set -euo pipefail
 HOST_NAME="com.gijiro.transcript"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
+# Chromium 系ブラウザはそれぞれ自分のユーザーデータ配下の NativeMessagingHosts を読む。
+# インストール済みのブラウザ（ユーザーデータのディレクトリがあるもの）すべてに manifest を置く
 case "$(uname -s)" in
   Darwin)
     INSTALL_DIR="$HOME/Library/Application Support/Gijiro/transcript-host"
-    MANIFEST_DIR="$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts"
+    SUPPORT="$HOME/Library/Application Support"
+    BROWSER_DIRS=(
+      "$SUPPORT/Google/Chrome"
+      "$SUPPORT/Arc/User Data"
+      "$SUPPORT/BraveSoftware/Brave-Browser"
+      "$SUPPORT/Microsoft Edge"
+      "$SUPPORT/Chromium"
+    )
     ;;
   Linux)
     INSTALL_DIR="$HOME/.local/share/gijiro/transcript-host"
-    MANIFEST_DIR="$HOME/.config/google-chrome/NativeMessagingHosts"
+    BROWSER_DIRS=(
+      "$HOME/.config/google-chrome"
+      "$HOME/.config/BraveSoftware/Brave-Browser"
+      "$HOME/.config/microsoft-edge"
+      "$HOME/.config/chromium"
+    )
     ;;
   *)
     echo "未対応の OS です: $(uname -s)" >&2
     exit 1
     ;;
 esac
-MANIFEST_PATH="$MANIFEST_DIR/$HOST_NAME.json"
+
+MANIFEST_PATHS=()
+for dir in "${BROWSER_DIRS[@]}"; do
+  if [ -d "$dir" ]; then
+    MANIFEST_PATHS+=("$dir/NativeMessagingHosts/$HOST_NAME.json")
+  fi
+done
 
 if [ "${1:-}" = "--uninstall" ]; then
-  rm -f "$MANIFEST_PATH"
+  for path in "${MANIFEST_PATHS[@]}"; do
+    rm -f "$path"
+    echo "削除しました: $path"
+  done
   rm -rf "$INSTALL_DIR"
-  echo "アンインストールしました: $MANIFEST_PATH"
+  echo "アンインストールしました"
   echo "保存済みの字幕（${GIJIRO_TRANSCRIPT_DIR:-$HOME/.gijiro/meetings}）は残しています。"
   exit 0
 fi
@@ -62,7 +85,12 @@ if [ -z "$NODE_BIN" ]; then
   exit 1
 fi
 
-mkdir -p "$INSTALL_DIR" "$MANIFEST_DIR"
+if [ ${#MANIFEST_PATHS[@]} -eq 0 ]; then
+  echo "Chromium 系ブラウザ（Chrome / Arc / Brave / Edge / Chromium）が見つかりません" >&2
+  exit 1
+fi
+
+mkdir -p "$INSTALL_DIR"
 cp "$REPO_ROOT/native-host/gijiro-transcript-host.mjs" "$INSTALL_DIR/host.mjs"
 
 DIR_EXPORT=""
@@ -82,7 +110,9 @@ for id in "$@"; do
   ORIGINS="$ORIGINS${ORIGINS:+, }\"chrome-extension://$id/\""
 done
 
-cat > "$MANIFEST_PATH" <<EOF
+for path in "${MANIFEST_PATHS[@]}"; do
+  mkdir -p "$(dirname "$path")"
+  cat > "$path" <<EOF
 {
   "name": "$HOST_NAME",
   "description": "Gijiro local transcript writer",
@@ -91,9 +121,12 @@ cat > "$MANIFEST_PATH" <<EOF
   "allowed_origins": [$ORIGINS]
 }
 EOF
+done
 
 echo "インストールしました"
-echo "  manifest: $MANIFEST_PATH"
+for path in "${MANIFEST_PATHS[@]}"; do
+  echo "  manifest: $path"
+done
 echo "  host:     $INSTALL_DIR/run.sh"
 echo "  node:     $NODE_BIN"
 echo "  保存先:   ${GIJIRO_TRANSCRIPT_DIR:-$HOME/.gijiro/meetings}"

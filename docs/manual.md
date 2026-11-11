@@ -24,7 +24,7 @@
 
 会議中の字幕を数秒ごとに `~/.gijiro/meetings/` の Markdown ファイルに書き出せます。ターミナルの Claude Code などから会議の内容を読ませたいときに使います。ファイルはこの PC の中にだけ保存されます。
 
-1. リポジトリを clone し、`./scripts/install-transcript-host.sh <拡張機能ID>` を実行します（拡張機能ID は設定画面に表示されます。Node.js が必要です）
+1. リポジトリを clone し、`./scripts/install-transcript-host.sh <拡張機能ID>` を実行します（拡張機能ID は設定画面に表示されます。Node.js が必要です。Chrome / Arc / Brave / Edge / Chromium のうちインストール済みのものすべてに登録されます）
 2. 設定画面で「字幕をこの PC に保存する」にチェックを入れて「保存」を押し、権限の確認を許可します
 3. 「接続テスト」を押し、保存先が表示されれば準備完了です
 
