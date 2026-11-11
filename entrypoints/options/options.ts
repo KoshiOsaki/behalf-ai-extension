@@ -1,7 +1,16 @@
-import { LOCAL_TRANSCRIPT_STORAGE_KEY } from '@/src/utils/localTranscript';
+import { LOCAL_TRANSCRIPT_STORAGE_KEY, REOPEN_OPTIONS_STORAGE_KEY } from '@/src/utils/localTranscript';
 
 const requestNativeMessaging = () =>
   chrome.permissions.request({ permissions: ['nativeMessaging'] });
+
+// 許可した直後は Service Worker に API が生えていないことがある。
+// そのときは拡張機能を再起動し、再起動後に background が設定画面を開き直す
+const reloadIfNeeded = async (response: { needsReload?: boolean } | undefined) => {
+  if (!response?.needsReload) return false;
+  await chrome.storage.local.set({ [REOPEN_OPTIONS_STORAGE_KEY]: true });
+  chrome.runtime.reload();
+  return true;
+};
 
 // オプションページの初期化
 document.addEventListener('DOMContentLoaded', async () => {
@@ -39,6 +48,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     showPingResult(true, '確認中…');
     const response = await chrome.runtime.sendMessage({ type: 'local-transcript-ping' });
+    if (await reloadIfNeeded(response)) {
+      showPingResult(true, '権限を反映するため拡張機能を再起動します…');
+      return;
+    }
     if (response?.ok) {
       showPingResult(true, `接続できました ✅ 保存先: ${response.dir}`);
     } else {
@@ -74,6 +87,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     await chrome.storage.local.set({
       [LOCAL_TRANSCRIPT_STORAGE_KEY]: { enabled: localTranscriptEnabled },
     });
+
+    if (localTranscriptEnabled) {
+      const response = await chrome.runtime.sendMessage({ type: 'local-transcript-ping' });
+      if (await reloadIfNeeded(response)) return;
+    }
 
     statusElement.style.color = '';
     statusElement.textContent = "保存しました ✅";

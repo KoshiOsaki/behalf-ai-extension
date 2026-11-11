@@ -19,7 +19,10 @@ export interface LocalTranscriptWriteRequest {
 
 export type HostResponse =
   | { ok: true; path?: string; dir?: string; version?: string }
-  | { ok: false; error: string };
+  | { ok: false; error: string; needsReload?: boolean };
+
+// 権限を反映するために拡張機能を再起動したあと、設定画面を開き直すための目印
+export const REOPEN_OPTIONS_STORAGE_KEY = "reopenOptionsAfterReload";
 
 const pad = (value: number) => value.toString().padStart(2, "0");
 

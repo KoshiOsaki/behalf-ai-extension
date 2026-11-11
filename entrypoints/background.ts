@@ -6,6 +6,7 @@ import {
   LOCAL_TRANSCRIPT_STORAGE_KEY,
   LocalTranscriptSettings,
   LocalTranscriptWriteRequest,
+  REOPEN_OPTIONS_STORAGE_KEY,
   TRANSCRIPT_HOST_NAME,
 } from "@/src/utils/localTranscript";
 
@@ -17,8 +18,16 @@ const describeHostError = (message: string) =>
 const sendToTranscriptHost = async (message: object): Promise<HostResponse> => {
   // nativeMessaging は optional_permissions。設定画面で許可されるまで API 自体が生えない
   const granted = await chrome.permissions.contains({ permissions: ["nativeMessaging"] });
-  if (!granted || !chrome.runtime.sendNativeMessage) {
+  if (!granted) {
     return { ok: false, error: "nativeMessaging の権限が許可されていません。設定画面で有効にしてください。" };
+  }
+  // 許可より前に起動していた Service Worker には API が生えないので、拡張機能の再起動が要る
+  if (!chrome.runtime.sendNativeMessage) {
+    return {
+      ok: false,
+      needsReload: true,
+      error: "権限を反映するには拡張機能の再起動が必要です。",
+    };
   }
   return new Promise((resolve) => {
     chrome.runtime.sendNativeMessage(TRANSCRIPT_HOST_NAME, message, (response) => {
@@ -49,6 +58,13 @@ export default defineBackground(() => {
   // 発言候補（Gemini）は廃止した。旧バージョンで保存した API キーを残さない
   chrome.runtime.onInstalled.addListener(() => {
     chrome.storage.local.remove("geminiApiKey");
+  });
+
+  // 設定画面から権限反映のために再起動したときは、設定画面を開き直す
+  chrome.storage.local.get(REOPEN_OPTIONS_STORAGE_KEY).then(async (result) => {
+    if (!result[REOPEN_OPTIONS_STORAGE_KEY]) return;
+    await chrome.storage.local.remove(REOPEN_OPTIONS_STORAGE_KEY);
+    chrome.runtime.openOptionsPage();
   });
 
   // メッセージリスナーを設定
